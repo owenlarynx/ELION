@@ -2,137 +2,474 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Elion</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 820px; margin: 30px auto; padding: 0 16px; background: #f4f4f4; }
-    .karte { background: white; border: 1px solid #ddd; padding: 14px; margin: 8px 0; border-radius: 8px; }
-    .klickbar { cursor: pointer; }
-    .klickbar:hover { background: #fafafa; }
-    button { padding: 8px 14px; margin: 4px; cursor: pointer; }
-    textarea { width: 100%; height: 110px; padding: 8px; box-sizing: border-box; }
-    .ampel { display: inline-block; width: 16px; height: 16px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
-    .gruen { background: #4caf50; } .gelb { background: #ff9800; } .rot { background: #f44336; } .grau { background: #ccc; }
-    .hidden { display: none; }
-    .woche { display: flex; gap: 6px; margin-top: 8px; }
-    .tag { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ELION – Heute</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <h1>Elion</h1>
-  <p id="datum"></p>
+  <header>
+    <div>
+      <p class="marke">ELION</p>
+      <p class="untertitel">Tagesdokumentation · Pilot</p>
+    </div>
+    <nav>
+      <a href="#heute" data-ansicht="heute" class="aktiv">Heute</a>
+      <a href="#woche" data-ansicht="woche">Woche</a>
+      <a href="/verwaltung.html">Verwaltung</a>
+    </nav>
+  </header>
 
-  <div id="liste">
-    <h2>Heute</h2>
-    <div id="kinder"></div>
-  </div>
+  <main>
+    <section id="ansicht-heute">
+      <h1>Heute</h1>
+      <p class="datum" id="heuteDatum"></p>
+      <div id="heuteKarten" class="karten"></div>
+      <p class="legende">
+        <span><i class="punkt gruen" aria-hidden="true"></i> Grün (G)</span>
+        <span><i class="punkt gelb" aria-hidden="true"></i> Gelb (Ge)</span>
+        <span><i class="punkt rot" aria-hidden="true"></i> Rot (R)</span>
+        <span><i class="punkt keine" aria-hidden="true"></i> geprüft, keine Ampel (?)</span>
+        <span><i class="punkt offen" aria-hidden="true"></i> offen (–)</span>
+        <span>Zwei Punkte: links Frühdienst, rechts Spätdienst</span>
+      </p>
+    </section>
 
-  <div id="detail" class="hidden">
-    <button onclick="zurueck()">← Zurück</button>
-    <h2 id="kindName"></h2>
-    <div id="kindInfo" class="karte"></div>
+    <section id="ansicht-bericht" hidden>
+      <p><button type="button" class="sekundaer" id="zurueck">← Zur Übersicht</button></p>
+      <div class="bericht-layout">
+        <section class="karte">
+          <h1 id="kindName">Bericht</h1>
+          <p class="datum" id="berichtDatum"></p>
+          <p><span class="status" id="berichtStatus">neu</span></p>
+          <label>Schicht
+            <select id="schicht">
+              <option value="">ohne Schicht</option>
+              <option value="frueh">Frühdienst</option>
+              <option value="spaet">Spätdienst</option>
+            </select>
+          </label>
+          <p class="hilfe" id="schichtHilfe"></p>
+          <label for="rohtext">Tagesbericht</label>
+          <textarea id="rohtext" placeholder="Sachlich beschreiben: Verlauf, Essen, Schlaf, Kontakte, Medikation (gegeben oder nicht gegeben), besondere Vorkommnisse."></textarea>
+          <div class="aktionen">
+            <button type="button" id="speichern">Speichern</button>
+            <button type="button" id="pruefen" class="sekundaer">Prüfen</button>
+            <button type="button" id="freigeben" class="sekundaer">Freigeben</button>
+          </div>
+          <p class="hinweis" id="formHinweis" role="status"></p>
+          <div id="pruefung"></div>
+        </section>
+        <aside class="karte" id="profilKarte">
+          <h2>Profil</h2>
+          <p class="leis">Wird geladen …</p>
+        </aside>
+      </div>
+    </section>
 
-    <h3>Bericht für heute</h3>
-    <textarea id="rohtext" placeholder="Wie war der Tag?"></textarea><br>
-    <button onclick="speichern()">Speichern</button>
-    <button onclick="pruefen()">Prüfen</button>
-    <div id="pruefung" class="karte hidden"></div>
+    <section id="ansicht-woche" hidden>
+      <h1>Woche</h1>
+      <div class="wochenleiste">
+        <button type="button" class="sekundaer" id="wocheZurueck">← Vorherige Woche</button>
+        <strong id="wochenLabel"></strong>
+        <button type="button" class="sekundaer" id="wocheVor">Nächste Woche →</button>
+        <button type="button" class="sekundaer" id="wocheDiese">Diese Woche</button>
+      </div>
+      <div class="wochenrahmen">
+        <table class="woche">
+          <thead id="wochenKopf"></thead>
+          <tbody id="wochenKörper"></tbody>
+        </table>
+      </div>
+      <p class="legende">
+        <span><i class="punkt gruen" aria-hidden="true"></i> Grün (G)</span>
+        <span><i class="punkt gelb" aria-hidden="true"></i> Gelb (Ge)</span>
+        <span><i class="punkt rot" aria-hidden="true"></i> Rot (R)</span>
+        <span><i class="punkt keine" aria-hidden="true"></i> geprüft, keine Ampel (?)</span>
+        <span><i class="punkt offen" aria-hidden="true"></i> offen (–)</span>
+        <span>Zwei Punkte an einem Tag: links Frühdienst, rechts Spätdienst</span>
+      </p>
+    </section>
+  </main>
 
-    <h3>Diese Woche</h3>
-    <div id="woche" class="woche"></div>
-  </div>
-
+  <script src="/common.js"></script>
   <script>
-    const API = "http://127.0.0.1:8000";
-    let aktuellesKind = null;
-    const heute = new Date().toISOString().slice(0,10);
+    let kindId = null;
+    let berichtId = null;
+    let berichtStatus = null;
+    let berichteCache = [];
+    let gespeicherterText = "";
+    let slotWechselOhneRueckfrage = false;
+    let wochenStart = montagDerWoche(new Date());
+    let heuteLauf = 0;
+    let wocheLauf = 0;
 
-    document.getElementById("datum").textContent = new Date().toLocaleDateString("de-DE", {weekday:"long", day:"numeric", month:"long"});
+    const heuteDatum = document.getElementById("heuteDatum");
+    heuteDatum.textContent = new Date().toLocaleDateString("de-DE", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
+    });
 
-    function ampelKlasse(a) { return a ? a.toLowerCase() : "grau"; }
-
-    async function ladeKinder() {
-      const res = await fetch(API + "/kinder/");
-      const kinder = await res.json();
-      let html = "";
-      for (const k of kinder) {
-        const berichte = await (await fetch(API + "/tagesberichte/kind/" + k.id)).json();
-        const heuteBericht = berichte.find(b => b.datum.startsWith(heute));
-        const ampel = heuteBericht ? heuteBericht.ampel : null;
-        html += `<div class="karte klickbar" onclick="oeffneKind(${k.id})">
-          <span class="ampel ${ampelKlasse(ampel)}"></span>
-          <b>${k.vorname}</b> ${k.nachname||""}
-          <small>${heuteBericht ? "dokumentiert" : "offen"}</small>
-        </div>`;
+    function zeige(name) {
+      for (const ansicht of ["heute", "bericht", "woche"]) {
+        document.getElementById("ansicht-" + ansicht).hidden = ansicht !== name;
       }
-      document.getElementById("kinder").innerHTML = html || "<p>Keine Kinder</p>";
+      document.querySelectorAll("nav a[data-ansicht]").forEach((link) => {
+        link.classList.toggle("aktiv", link.dataset.ansicht === name);
+      });
+      document.title = { heute: "ELION – Heute", bericht: "ELION – Bericht", woche: "ELION – Woche" }[name] || "ELION";
+      const hash = "#" + name;
+      if (location.hash !== hash) history.replaceState(null, "", hash);
+      if (name === "heute") ladeHeute();
+      if (name === "woche") ladeWoche();
+    }
+
+    function eintragTitel(name, datumIso, eintrag, schichtLabel) {
+      const datum = datumAusIso(datumIso).toLocaleDateString("de-DE");
+      if (!eintrag) return `${name}, ${datum}, ${schichtLabel}: offen`;
+      return `${name}, ${datum}, ${schichtLabel}: ${ampelText(eintrag.ampel)} (${statusText(eintrag.status)})`;
+    }
+
+    function zelle(eintraege, name, datumIso) {
+      const mitSchicht = eintraege.some((eintrag) => eintrag.schicht);
+      if (!mitSchicht) {
+        const eintrag = eintraege[0] || null;
+        const vorhanden = Boolean(eintrag);
+        return {
+          punkte: punktHtml(vorhanden ? eintrag.ampel : null, eintragTitel(name, datumIso, eintrag, "Tag"), vorhanden),
+          kuerzel: ampelKuerzel(vorhanden ? eintrag.ampel : null, vorhanden),
+        };
+      }
+      const paare = [
+        ["frueh", "Frühdienst"],
+        ["spaet", "Spätdienst"],
+      ];
+      const punkte = [];
+      const kuerzel = [];
+      for (const [wert, label] of paare) {
+        const eintrag = eintraege.find((kandidat) => kandidat.schicht === wert) || null;
+        const vorhanden = Boolean(eintrag);
+        punkte.push(punktHtml(vorhanden ? eintrag.ampel : null, eintragTitel(name, datumIso, eintrag, label), vorhanden));
+        kuerzel.push(ampelKuerzel(vorhanden ? eintrag.ampel : null, vorhanden));
+      }
+      return { punkte: punkte.join(""), kuerzel: kuerzel.join(" · ") };
+    }
+
+    function tagesText(eintraege) {
+      if (!eintraege.length) return "offen";
+      if (!eintraege.some((eintrag) => eintrag.schicht)) {
+        const eintrag = eintraege[0];
+        return `${ampelText(eintrag.ampel)} · ${statusText(eintrag.status)}`;
+      }
+      return ["frueh", "spaet"].map((schicht) => {
+        const eintrag = eintraege.find((kandidat) => kandidat.schicht === schicht);
+        const kurz = schicht === "frueh" ? "Früh" : "Spät";
+        return eintrag ? `${kurz}: ${ampelText(eintrag.ampel)}` : `${kurz}: offen`;
+      }).join(" · ");
+    }
+
+    async function ladeHeute() {
+      const lauf = ++heuteLauf;
+      const ziel = document.getElementById("heuteKarten");
+      ziel.innerHTML = "<p class=\"leis\">Wird geladen …</p>";
+      try {
+        const montag = isoDatum(montagDerWoche(new Date()));
+        const woche = await api("/tagesberichte/woche?von=" + montag);
+        if (lauf !== heuteLauf) return;
+        const heute = heuteLokal();
+        if (!woche.kinder.length) {
+          ziel.innerHTML = "<p>Noch keine Kinder. In der <a href=\"/verwaltung.html\">Verwaltung</a> können Platzhalter angelegt werden.</p>";
+          return;
+        }
+        ziel.innerHTML = woche.kinder.map((kind) => {
+          const tag = kind.tage.find((eintrag) => eintrag.datum === heute) || { datum: heute, eintraege: [] };
+          const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
+          const darstellung = zelle(tag.eintraege, name, tag.datum);
+          return `<button type="button" class="kindkarte" data-kind="${kind.id}">
+            <span class="karte-kopf">${darstellung.punkte}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span></span>
+            <strong class="kindname">${escapeHtml(name)}</strong>
+            <span class="meta">${escapeHtml(tagesText(tag.eintraege))}</span>
+          </button>`;
+        }).join("");
+      } catch (fehler) {
+        if (lauf !== heuteLauf) return;
+        ziel.innerHTML = `<p>${escapeHtml(fehler.message)}</p>`;
+      }
+    }
+
+    function berichtFuer(schicht) {
+      const heute = heuteLokal();
+      const treffer = berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === heute && (bericht.schicht || "") === schicht);
+      treffer.sort((a, b) => b.id - a.id);
+      return treffer[0] || null;
+    }
+
+    function formularSperren() {
+      const gesperrt = berichtStatus === "freigegeben";
+      document.getElementById("rohtext").readOnly = gesperrt;
+      document.getElementById("speichern").disabled = gesperrt;
+      document.getElementById("pruefen").disabled = !berichtId || gesperrt;
+      document.getElementById("freigeben").disabled = !berichtId || gesperrt;
+    }
+
+    function pruefungAnzeigen(bericht) {
+      const ziel = document.getElementById("pruefung");
+      if (!bericht || !bericht.wrap_ergebnis) {
+        ziel.innerHTML = "<p class=\"leis\">Noch keine Prüfung.</p>";
+        return;
+      }
+      const text = ampelText(bericht.ampel);
+      ziel.innerHTML = `<p class="ampelzeile">${punktHtml(bericht.ampel, text, true)} <strong>${escapeHtml(text)}</strong></p>
+        <div class="prueftext">${escapeHtml(bericht.wrap_ergebnis)}</div>`;
+    }
+
+    function slotInFormular(schicht) {
+      slotWechselOhneRueckfrage = true;
+      document.getElementById("schicht").value = schicht;
+      slotWechselOhneRueckfrage = false;
+      const bericht = berichtFuer(schicht);
+      berichtId = bericht ? bericht.id : null;
+      berichtStatus = bericht ? bericht.status : null;
+      const text = bericht ? bericht.rohtext : "";
+      document.getElementById("rohtext").value = text;
+      gespeicherterText = text;
+      const status = document.getElementById("berichtStatus");
+      status.textContent = bericht ? statusText(bericht.status) : "neu";
+      status.className = "status" + (bericht && bericht.status === "freigegeben" ? " freigegeben" : "");
+      document.getElementById("schichtHilfe").textContent = schichtUebersicht();
+      pruefungAnzeigen(bericht);
+      formularSperren();
+    }
+
+    function schichtUebersicht() {
+      const heute = heuteLokal();
+      const berichte = berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === heute);
+      if (!berichte.length) return "Heute noch nichts gespeichert. Die Auswahl gilt für Frühdienst, Spätdienst oder einen Eintrag ohne Schicht.";
+      const teile = ["", "frueh", "spaet"].map((schicht) => {
+        const bericht = berichte.filter((eintrag) => (eintrag.schicht || "") === schicht).sort((a, b) => b.id - a.id)[0];
+        if (!bericht) return null;
+        return `${schichtName(schicht)}: ${ampelText(bericht.ampel)} (${statusText(bericht.status)})`;
+      }).filter(Boolean);
+      return teile.join(" · ");
+    }
+
+    function startSchicht() {
+      const heute = heuteLokal();
+      const berichte = berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === heute);
+      if (berichte.some((bericht) => !bericht.schicht)) return "";
+      if (berichte.some((bericht) => bericht.schicht === "frueh")) return "frueh";
+      if (berichte.some((bericht) => bericht.schicht === "spaet")) return "spaet";
+      return "";
+    }
+
+    async function ladeBericht() {
+      const [kind, medikamente, berichte] = await Promise.all([
+        api("/kinder/" + kindId),
+        api("/medikamente/kind/" + kindId),
+        api("/tagesberichte/kind/" + kindId),
+      ]);
+      berichteCache = berichte;
+      const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
+      document.getElementById("kindName").textContent = name;
+      document.getElementById("berichtDatum").textContent = new Date().toLocaleDateString("de-DE", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+      const profil = [
+        kind.paragraph ? `Rechtsgrundlage: ${kind.paragraph}` : "",
+        `Besonderheiten\n${kind.besonderheiten || "keine Angaben"}`,
+        `Dokumentationshinweise\n${kind.dokumentationshinweise || "keine Angaben"}`,
+      ].filter(Boolean).join("\n\n");
+      const medListe = medikamente.length
+        ? `<ul class="liste">${medikamente.map((med) => `<li><div><strong>${escapeHtml(med.name)}</strong>${med.dosierung ? `, ${escapeHtml(med.dosierung)}` : ""}${med.einnahmezeit ? ` · ${escapeHtml(med.einnahmezeit)}` : ""}${med.hinweis ? `<br><span class="leis">${escapeHtml(med.hinweis)}</span>` : ""}</div></li>`).join("")}</ul>`
+        : "<p class=\"leis\">Keine Medikamente hinterlegt.</p>";
+      document.getElementById("profilKarte").innerHTML = `<h2>Profil</h2><div class="profiltext">${escapeHtml(profil)}</div><h3>Medikamente</h3>${medListe}`;
+      slotInFormular(startSchicht());
     }
 
     async function oeffneKind(id) {
-      aktuellesKind = id;
-      const kind = await (await fetch(API + "/kinder/" + id)).json();
-      document.getElementById("kindName").textContent = kind.vorname + " " + (kind.nachname||"");
-      document.getElementById("kindInfo").innerHTML = `<b>Besonderheiten:</b> ${kind.besonderheiten||"-"}<br><b>Hinweise:</b> ${kind.dokumentationshinweise||"-"}`;
-
-      const berichte = await (await fetch(API + "/tagesberichte/kind/" + id)).json();
-      const heuteBericht = berichte.find(b => b.datum.startsWith(heute));
-      document.getElementById("rohtext").value = heuteBericht ? heuteBericht.rohtext : "";
-      zeigePruefung(heuteBericht);
-
-      // Wochenübersicht (letzte 7 Tage)
-      const woche = document.getElementById("woche");
-      woche.innerHTML = "";
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const ds = d.toISOString().slice(0,10);
-        const b = berichte.find(x => x.datum.startsWith(ds));
-        const el = document.createElement("div");
-        el.className = "tag " + ampelKlasse(b ? b.ampel : null);
-        el.title = d.toLocaleDateString("de-DE");
-        el.textContent = d.getDate();
-        woche.appendChild(el);
+      kindId = id;
+      document.getElementById("formHinweis").textContent = "";
+      try {
+        await ladeBericht();
+        zeige("bericht");
+      } catch (fehler) {
+        document.getElementById("heuteKarten").innerHTML = `<p>${escapeHtml(fehler.message)}</p>`;
+        zeige("heute");
       }
-
-      document.getElementById("liste").classList.add("hidden");
-      document.getElementById("detail").classList.remove("hidden");
     }
 
-    function zeigePruefung(b) {
-      const el = document.getElementById("pruefung");
-      if (b && b.wrap_ergebnis) {
-        el.classList.remove("hidden");
-        el.innerHTML = `<span class="ampel ${ampelKlasse(b.ampel)}"></span><b>Prüfung</b><br>${b.wrap_ergebnis.replace(/\n/g,"<br>")}`;
-      } else {
-        el.classList.add("hidden");
-      }
+    function setzeHinweis(text) {
+      document.getElementById("formHinweis").textContent = text;
     }
 
     async function speichern() {
-      const rohtext = document.getElementById("rohtext").value;
-      if (!rohtext) return;
-      await fetch(API + "/tagesberichte/", {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({kind_id: aktuellesKind, datum: new Date().toISOString(), rohtext})
-      });
-      oeffneKind(aktuellesKind);
+      const rohtext = document.getElementById("rohtext").value.trim();
+      if (!rohtext) {
+        setzeHinweis("Bitte einen Text eingeben.");
+        return;
+      }
+      if (berichtStatus === "freigegeben") {
+        setzeHinweis("Dieser Bericht ist freigegeben und kann nicht geändert werden.");
+        return;
+      }
+      const schicht = document.getElementById("schicht").value || null;
+      try {
+        if (berichtId) {
+          await api("/tagesberichte/" + berichtId, {
+            method: "PUT",
+            body: JSON.stringify({ rohtext }),
+          });
+        } else {
+          await api("/tagesberichte/", {
+            method: "POST",
+            body: JSON.stringify({
+              kind_id: kindId,
+              datum: heuteLokal() + "T00:00:00",
+              rohtext,
+              schicht,
+            }),
+          });
+        }
+        setzeHinweis("Gespeichert.");
+        await ladeBericht();
+        slotInFormular(schicht || "");
+      } catch (fehler) {
+        setzeHinweis(fehler.message);
+      }
     }
 
     async function pruefen() {
-      const berichte = await (await fetch(API + "/tagesberichte/kind/" + aktuellesKind)).json();
-      const heuteBericht = berichte.find(b => b.datum.startsWith(heute));
-      if (!heuteBericht) return alert("Bitte zuerst speichern");
-      await fetch(API + "/tagesberichte/" + heuteBericht.id + "/pruefen", {method:"POST"});
-      oeffneKind(aktuellesKind);
+      if (!berichtId) {
+        setzeHinweis("Bitte den Bericht zuerst speichern.");
+        return;
+      }
+      const knopf = document.getElementById("pruefen");
+      knopf.disabled = true;
+      setzeHinweis("Prüfung läuft …");
+      try {
+        await api("/tagesberichte/" + berichtId + "/pruefen", { method: "POST" });
+        const schicht = document.getElementById("schicht").value;
+        await ladeBericht();
+        slotInFormular(schicht);
+        setzeHinweis("Prüfung abgeschlossen.");
+      } catch (fehler) {
+        setzeHinweis(fehler.message);
+        formularSperren();
+      }
     }
 
-    function zurueck() {
-      document.getElementById("detail").classList.add("hidden");
-      document.getElementById("liste").classList.remove("hidden");
-      ladeKinder();
+    async function freigeben() {
+      if (!berichtId) {
+        setzeHinweis("Bitte den Bericht zuerst speichern.");
+        return;
+      }
+      if (!window.confirm("Bericht freigeben? Danach ist er nicht mehr änderbar.")) return;
+      try {
+        await api("/tagesberichte/" + berichtId + "/freigeben", { method: "POST" });
+        const schicht = document.getElementById("schicht").value;
+        await ladeBericht();
+        slotInFormular(schicht);
+        setzeHinweis("Freigegeben.");
+      } catch (fehler) {
+        setzeHinweis(fehler.message);
+      }
     }
 
-    ladeKinder();
+    document.getElementById("schicht").addEventListener("change", () => {
+      if (slotWechselOhneRueckfrage) return;
+      const neu = document.getElementById("schicht").value;
+      if (document.getElementById("rohtext").value !== gespeicherterText) {
+        const verwerfen = window.confirm("Ungespeicherte Änderungen verwerfen und die andere Schicht öffnen?");
+        if (!verwerfen) {
+          const bisher = berichtId ? (berichteCache.find((bericht) => bericht.id === berichtId)?.schicht || "") : "";
+          slotWechselOhneRueckfrage = true;
+          document.getElementById("schicht").value = bisher;
+          slotWechselOhneRueckfrage = false;
+          return;
+        }
+      }
+      slotInFormular(neu);
+      setzeHinweis("");
+    });
+
+    document.getElementById("heuteKarten").addEventListener("click", (event) => {
+      const karte = event.target.closest("[data-kind]");
+      if (karte) oeffneKind(Number(karte.dataset.kind));
+    });
+
+    document.querySelector("nav").addEventListener("click", (event) => {
+      const link = event.target.closest("a[data-ansicht]");
+      if (!link) return;
+      event.preventDefault();
+      zeige(link.dataset.ansicht);
+    });
+
+    document.getElementById("zurueck").addEventListener("click", () => zeige("heute"));
+    document.getElementById("speichern").addEventListener("click", speichern);
+    document.getElementById("pruefen").addEventListener("click", pruefen);
+    document.getElementById("freigeben").addEventListener("click", freigeben);
+    document.getElementById("wocheZurueck").addEventListener("click", () => {
+      wochenStart = addTage(wochenStart, -7);
+      ladeWoche();
+    });
+    document.getElementById("wocheVor").addEventListener("click", () => {
+      wochenStart = addTage(wochenStart, 7);
+      ladeWoche();
+    });
+    document.getElementById("wocheDiese").addEventListener("click", () => {
+      wochenStart = montagDerWoche(new Date());
+      ladeWoche();
+    });
+
+    async function ladeWoche() {
+      const lauf = ++wocheLauf;
+      const label = document.getElementById("wochenLabel");
+      const sonntag = addTage(wochenStart, 6);
+      const format = (datum) => datum.toLocaleDateString("de-DE", { day: "numeric", month: "long" });
+      label.textContent = `${format(wochenStart)} – ${format(sonntag)} ${sonntag.getFullYear()}`;
+      try {
+        const woche = await api("/tagesberichte/woche?von=" + isoDatum(wochenStart));
+        if (lauf !== wocheLauf) return;
+        const heute = heuteLokal();
+        const kopf = woche.kinder[0] ? woche.kinder[0].tage : [];
+        const tage = kopf.length ? kopf : Array.from({ length: 7 }, (_, index) => ({ datum: isoDatum(addTage(wochenStart, index)) }));
+        document.getElementById("wochenKopf").innerHTML = `<tr><th>Kind</th>${tage.map((tag) => {
+          const text = datumAusIso(tag.datum).toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "numeric" });
+          return `<th class="${tag.datum === heute ? "heute" : ""}">${escapeHtml(text)}</th>`;
+        }).join("")}</tr>`;
+        const koerper = document.getElementById("wochenKörper");
+        if (!woche.kinder.length) {
+          koerper.innerHTML = `<tr><td colspan="8">Noch keine Kinder. In der <a href="/verwaltung.html">Verwaltung</a> können Platzhalter angelegt werden.</td></tr>`;
+          return;
+        }
+        koerper.innerHTML = woche.kinder.map((kind) => {
+          const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
+          const zellen = kind.tage.map((tag) => {
+            const darstellung = zelle(tag.eintraege, name, tag.datum);
+            return `<td class="${tag.datum === heute ? "heute" : ""}"><div class="zelle">${darstellung.punkte}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span></div></td>`;
+          }).join("");
+          return `<tr><td><button type="button" class="link" data-kind="${kind.id}">${escapeHtml(name)}</button></td>${zellen}</tr>`;
+        }).join("");
+      } catch (fehler) {
+        if (lauf !== wocheLauf) return;
+        document.getElementById("wochenKörper").innerHTML = `<tr><td colspan="8">${escapeHtml(fehler.message)}</td></tr>`;
+      }
+    }
+
+    document.getElementById("wochenKörper").addEventListener("click", (event) => {
+      const knopf = event.target.closest("[data-kind]");
+      if (knopf) oeffneKind(Number(knopf.dataset.kind));
+    });
+
+    const parameter = new URLSearchParams(location.search);
+    const kindParameter = parameter.get("kind");
+    if (kindParameter) {
+      oeffneKind(Number(kindParameter));
+    } else if (location.hash === "#woche") {
+      zeige("woche");
+    } else if (location.hash === "#bericht") {
+      zeige("heute");
+    } else {
+      zeige("heute");
+    }
   </script>
 </body>
 </html>
