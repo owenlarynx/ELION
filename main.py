@@ -1,12 +1,15 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from database import engine, Base
-import models
 
-Base.metadata.create_all(bind=engine)
+import models  # noqa: F401  (registriert die Tabellen)
+from database import ensure_schema
 
-app = FastAPI(title="Elion API", version="0.1.0")
+ensure_schema()
+
+app = FastAPI(title="Elion API", version="0.2.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,9 +20,11 @@ app.add_middleware(
 )
 
 from routes import kinder, berichte, medikamente, kontakte
+
 app.include_router(kinder.router)
 app.include_router(berichte.router)
 app.include_router(medikamente.router)
 app.include_router(kontakte.router)
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

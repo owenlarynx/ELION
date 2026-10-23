@@ -1,14 +1,35 @@
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+import os
+from datetime import datetime, timezone
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./elion.db"
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import NullPool
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+
+def utc_now():
+    """Naive UTC timestamp. SQLite DateTime columns have no timezone."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def database_url() -> str:
+    return os.environ.get("ELION_DATABASE_URL", "sqlite:///./elion.db")
+
+
+def _engine_for(url: str):
+    if url.startswith("sqlite"):
+        return create_engine(
+            url,
+            connect_args={"check_same_thread": False},
+            poolclass=NullPool,
+        )
+    return create_engine(url)
+
+
+DATABASE_URL = database_url()
+engine = _engine_for(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
@@ -16,3 +37,17 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def ensure_schema():
+    """Create tables and add columns introduced after the first pilot database."""
+    Base.metadata.create_all(bind=engine)
+    if engine.dialect.name != "sqlite":
+        return
+    with engine.begin() as conn:
+        rows = conn.execute(text("PRAGMA table_info(tagesberichte)")).fetchall()
+        if not rows:
+            return
+        spalten = {row[1] for row in rows}
+        if "schicht" not in spalten:
+            conn.execute(text("ALTER TABLE tagesberichte ADD COLUMN schicht VARCHAR"))

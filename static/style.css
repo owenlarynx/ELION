@@ -1,0 +1,254 @@
+:root {
+  --tinte: #1c2830;
+  --leis: #5c6b73;
+  --linie: #e3ddd2;
+  --papier: #f6f3ed;
+  --karte: #fffdf9;
+  --akzent: #1e4f5a;
+  --akzent-hell: #e6f1f3;
+  --gruen: #1b7f4a;
+  --gelb: #c8880a;
+  --rot: #c2382f;
+  --schatten: 0 1px 2px rgba(28, 40, 48, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: var(--tinte);
+  background: var(--papier);
+  line-height: 1.45;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 22px;
+  background: var(--karte);
+  border-bottom: 1px solid var(--linie);
+}
+
+.marke {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.untertitel {
+  margin: 0;
+  color: var(--leis);
+  font-size: 0.9rem;
+}
+
+nav { display: flex; gap: 8px; flex-wrap: wrap; }
+
+nav a {
+  color: var(--akzent);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+nav a.aktiv { background: var(--akzent-hell); font-weight: 650; }
+
+main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 48px; }
+
+h1 { font-size: 1.6rem; margin: 0 0 4px; }
+h2 { font-size: 1.25rem; margin: 0 0 8px; }
+h3 { font-size: 1rem; margin: 0 0 8px; }
+
+.datum, .leis, .hilfe { color: var(--leis); }
+.hilfe { margin-top: 0; font-size: 0.92rem; }
+
+.karten {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.kindkarte, .karte, .formular, table.woche {
+  background: var(--karte);
+  border: 1px solid var(--linie);
+  border-radius: 12px;
+  box-shadow: var(--schatten);
+}
+
+.kindkarte {
+  text-align: left;
+  padding: 14px;
+  cursor: pointer;
+  color: inherit;
+  width: 100%;
+}
+
+.kindkarte:hover { border-color: var(--akzent); }
+
+.karte-kopf, .punkte {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.kuerzel {
+  margin-left: 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--leis);
+}
+
+.kindname { display: block; margin-top: 8px; font-size: 1.05rem; }
+.meta { display: block; color: var(--leis); font-size: 0.9rem; }
+
+.punkt {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+
+.kindkarte .punkt, .ampelzeile .punkt { width: 18px; height: 18px; }
+
+.punkt.gruen { background: var(--gruen); }
+.punkt.gelb { background: var(--gelb); }
+.punkt.rot { background: var(--rot); }
+.punkt.keine { background: #cfc8bd; }
+.punkt.offen { background: transparent; border: 2px dashed #b7b0a4; }
+
+.legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  color: var(--leis);
+  font-size: 0.88rem;
+  margin: 14px 0 0;
+}
+
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+
+.bericht-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  align-items: start;
+}
+
+.karte, .formular { padding: 16px; }
+
+label { display: block; font-weight: 600; margin: 10px 0; }
+
+input, select, textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+
+textarea { min-height: 200px; resize: vertical; }
+
+.aktionen, .wochenleiste, .zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+button, .button {
+  font: inherit;
+  background: var(--akzent);
+  color: white;
+  border: 1px solid var(--akzent);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+button.sekundaer, a.button.sekundaer {
+  background: white;
+  color: var(--akzent);
+}
+
+button.leise {
+  background: white;
+  color: #8a3b32;
+  border-color: #e4c7c3;
+}
+
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.hinweis { min-height: 1.2em; }
+
+.ampelzeile { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+.prueftext, .profiltext { white-space: pre-wrap; margin: 0; }
+
+.label { display: block; color: var(--leis); font-size: 0.82rem; font-weight: 650; }
+
+.status {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.82rem;
+  background: var(--akzent-hell);
+}
+
+.status.freigegeben { background: #e5f4ea; }
+
+.wochenrahmen { overflow-x: auto; margin-top: 12px; }
+
+table.woche { width: 100%; border-collapse: collapse; min-width: 760px; }
+
+table.woche th, table.woche td {
+  border-bottom: 1px solid var(--linie);
+  padding: 10px 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+table.woche th:first-child, table.woche td:first-child { text-align: left; }
+
+table.woche th.heute, table.woche td.heute { background: var(--akzent-hell); }
+
+button.link {
+  background: none;
+  color: var(--akzent);
+  border: 0;
+  padding: 0;
+  font-weight: 700;
+}
+
+.zelle { display: grid; justify-items: center; gap: 4px; }
+
+.liste { list-style: none; padding: 0; margin: 12px 0 0; }
+
+.liste li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-top: 1px solid var(--linie);
+}
+
+.liste li.inaktiv { opacity: 0.7; }
+
+.formular + .formular, .karte + .formular, .formular + .karte { margin-top: 16px; }
+
+.abschnitt { margin-top: 28px; }
+
+:focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
+
+@media (max-width: 800px) {
+  .bericht-layout { grid-template-columns: 1fr; }
+  header { align-items: flex-start; }
+}
