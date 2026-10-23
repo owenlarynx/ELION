@@ -30,7 +30,7 @@
         <span><i class="punkt rot" aria-hidden="true"></i> Rot (R)</span>
         <span><i class="punkt keine" aria-hidden="true"></i> geprüft, keine Ampel (?)</span>
         <span><i class="punkt offen" aria-hidden="true"></i> offen (–)</span>
-        <span>Zwei Punkte: links Frühdienst, rechts Spätdienst</span>
+        <span>Eine Ampel pro Tag, die schlechteste. Hinweis, wenn eine Schicht fehlt oder ungeprüft ist.</span>
       </p>
     </section>
 
@@ -41,23 +41,32 @@
           <h1 id="kindName">Bericht</h1>
           <p class="datum" id="berichtDatum"></p>
           <p><span class="status" id="berichtStatus">neu</span></p>
+          <div id="schichtLeiste" class="schichtleiste" aria-label="Schichten dieses Tages"></div>
           <label>Schicht
             <select id="schicht">
               <option value="">ohne Schicht</option>
               <option value="frueh">Frühdienst</option>
+              <option value="mittel">Mitteldienst (etwa 12 Stunden)</option>
               <option value="spaet">Spätdienst</option>
+              <option value="nacht">Nachtdienst</option>
             </select>
           </label>
-          <p class="hilfe" id="schichtHilfe"></p>
+          <p class="hilfe" id="schichtHilfe">Jede Schicht hat eine eigene Ampel. Die Übersicht zeigt nur die schlechteste des Tages.</p>
           <label for="rohtext">Tagesbericht</label>
           <textarea id="rohtext" placeholder="Sachlich beschreiben: Verlauf, Essen, Schlaf, Kontakte, Medikation (gegeben oder nicht gegeben), besondere Vorkommnisse."></textarea>
+          <label id="nameFeld" hidden>Name für den Verlauf
+            <input id="nachtragVon" maxlength="80" placeholder="optional">
+          </label>
           <div class="aktionen">
             <button type="button" id="speichern">Speichern</button>
             <button type="button" id="pruefen" class="sekundaer">Prüfen</button>
             <button type="button" id="freigeben" class="sekundaer">Freigeben</button>
+            <button type="button" id="nachtrag" class="sekundaer" hidden>Bearbeiten / Nachtrag</button>
           </div>
           <p class="hinweis" id="formHinweis" role="status"></p>
           <div id="pruefung"></div>
+          <h3>Verlauf</h3>
+          <div id="verlauf"></div>
         </section>
         <aside class="karte" id="profilKarte">
           <h2>Profil</h2>
@@ -86,7 +95,7 @@
         <span><i class="punkt rot" aria-hidden="true"></i> Rot (R)</span>
         <span><i class="punkt keine" aria-hidden="true"></i> geprüft, keine Ampel (?)</span>
         <span><i class="punkt offen" aria-hidden="true"></i> offen (–)</span>
-        <span>Zwei Punkte an einem Tag: links Frühdienst, rechts Spätdienst</span>
+        <span>Eine Ampel pro Tag, die schlechteste. Ein Tag öffnet die Schichten.</span>
       </p>
     </section>
   </main>
@@ -98,10 +107,15 @@
     let berichtStatus = null;
     let berichteCache = [];
     let gespeicherterText = "";
+    let nachtragModus = false;
+    let verlaufLauf = 0;
     let slotWechselOhneRueckfrage = false;
     let wochenStart = montagDerWoche(new Date());
     let heuteLauf = 0;
     let wocheLauf = 0;
+    let ansichtsDatum = heuteLokal();
+    let herkunft = "heute";
+    let aktuelleSchicht = "frueh";
 
     const heuteDatum = document.getElementById("heuteDatum");
     heuteDatum.textContent = new Date().toLocaleDateString("de-DE", {
@@ -122,48 +136,22 @@
       if (name === "woche") ladeWoche();
     }
 
-    function eintragTitel(name, datumIso, eintrag, schichtLabel) {
-      const datum = datumAusIso(datumIso).toLocaleDateString("de-DE");
-      if (!eintrag) return `${name}, ${datum}, ${schichtLabel}: offen`;
-      return `${name}, ${datum}, ${schichtLabel}: ${ampelText(eintrag.ampel)} (${statusText(eintrag.status)})`;
-    }
-
-    function zelle(eintraege, name, datumIso) {
-      const mitSchicht = eintraege.some((eintrag) => eintrag.schicht);
-      if (!mitSchicht) {
-        const eintrag = eintraege[0] || null;
-        const vorhanden = Boolean(eintrag);
-        return {
-          punkte: punktHtml(vorhanden ? eintrag.ampel : null, eintragTitel(name, datumIso, eintrag, "Tag"), vorhanden),
-          kuerzel: ampelKuerzel(vorhanden ? eintrag.ampel : null, vorhanden),
-        };
-      }
-      const paare = [
-        ["frueh", "Frühdienst"],
-        ["spaet", "Spätdienst"],
-      ];
-      const punkte = [];
-      const kuerzel = [];
-      for (const [wert, label] of paare) {
-        const eintrag = eintraege.find((kandidat) => kandidat.schicht === wert) || null;
-        const vorhanden = Boolean(eintrag);
-        punkte.push(punktHtml(vorhanden ? eintrag.ampel : null, eintragTitel(name, datumIso, eintrag, label), vorhanden));
-        kuerzel.push(ampelKuerzel(vorhanden ? eintrag.ampel : null, vorhanden));
-      }
-      return { punkte: punkte.join(""), kuerzel: kuerzel.join(" · ") };
-    }
-
-    function tagesText(eintraege) {
-      if (!eintraege.length) return "offen";
-      if (!eintraege.some((eintrag) => eintrag.schicht)) {
-        const eintrag = eintraege[0];
-        return `${ampelText(eintrag.ampel)} · ${statusText(eintrag.status)}`;
-      }
-      return ["frueh", "spaet"].map((schicht) => {
-        const eintrag = eintraege.find((kandidat) => kandidat.schicht === schicht);
-        const kurz = schicht === "frueh" ? "Früh" : "Spät";
-        return eintrag ? `${kurz}: ${ampelText(eintrag.ampel)}` : `${kurz}: offen`;
-      }).join(" · ");
+    function tagesdarstellung(tag, name) {
+      const eintraege = tag.eintraege || [];
+      const vorhanden = eintraege.length > 0;
+      const datum = datumAusIso(tag.datum).toLocaleDateString("de-DE");
+      const stand = vorhanden ? ampelText(tag.ampel) : "offen";
+      const zusatz = tag.hinweis ? ` · ${tag.hinweis}` : "";
+      const titel = `${name}, ${datum}: ${stand}${zusatz}`;
+      let hinweis = "";
+      if (tag.hinweis) hinweis = tag.hinweis;
+      else if (!vorhanden) hinweis = "offen";
+      return {
+        punkt: punktHtml(vorhanden ? tag.ampel : null, titel, vorhanden),
+        kuerzel: ampelKuerzel(vorhanden ? tag.ampel : null, vorhanden),
+        hinweis,
+        titel,
+      };
     }
 
     async function ladeHeute() {
@@ -180,13 +168,16 @@
           return;
         }
         ziel.innerHTML = woche.kinder.map((kind) => {
-          const tag = kind.tage.find((eintrag) => eintrag.datum === heute) || { datum: heute, eintraege: [] };
+          const tag = kind.tage.find((eintrag) => eintrag.datum === heute) || { datum: heute, eintraege: [], ampel: null, hinweis: null };
           const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
-          const darstellung = zelle(tag.eintraege, name, tag.datum);
-          return `<button type="button" class="kindkarte" data-kind="${kind.id}">
-            <span class="karte-kopf">${darstellung.punkte}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span></span>
+          const darstellung = tagesdarstellung(tag, name);
+          const hinweis = darstellung.hinweis
+            ? `<span class="meta">${escapeHtml(darstellung.hinweis)}</span>`
+            : "";
+          return `<button type="button" class="kindkarte" data-kind="${kind.id}" data-datum="${escapeHtml(tag.datum)}">
+            <span class="karte-kopf">${darstellung.punkt}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span></span>
             <strong class="kindname">${escapeHtml(name)}</strong>
-            <span class="meta">${escapeHtml(tagesText(tag.eintraege))}</span>
+            ${hinweis}
           </button>`;
         }).join("");
       } catch (fehler) {
@@ -195,19 +186,45 @@
       }
     }
 
+    function berichteDesTages() {
+      return berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === ansichtsDatum);
+    }
+
     function berichtFuer(schicht) {
-      const heute = heuteLokal();
-      const treffer = berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === heute && (bericht.schicht || "") === schicht);
+      const treffer = berichteDesTages().filter((bericht) => (bericht.schicht || "") === schicht);
       treffer.sort((a, b) => b.id - a.id);
       return treffer[0] || null;
     }
 
+    function schichtKnopf(wert, kurz, gewaehlt) {
+      const bericht = berichtFuer(wert);
+      const vorhanden = Boolean(bericht);
+      const titel = `${kurz}: ${vorhanden ? ampelText(bericht.ampel) : "offen"}`;
+      const aktiv = gewaehlt === wert ? " aktiv" : "";
+      const voll = wert === "" ? " voll" : "";
+      return `<button type="button" class="schichtwahl${aktiv}${voll}" data-schicht="${escapeHtml(wert)}" aria-pressed="${gewaehlt === wert ? "true" : "false"}">
+        ${punktHtml(vorhanden ? bericht.ampel : null, titel, vorhanden)}
+        <span>${escapeHtml(kurz)}</span>
+        <span class="kuerzel">${escapeHtml(ampelKuerzel(vorhanden ? bericht.ampel : null, vorhanden))}</span>
+      </button>`;
+    }
+
+    function schichtLeisteZeichnen() {
+      const gewaehlt = document.getElementById("schicht").value;
+      const teile = SCHICHTEN.map((schicht) => schichtKnopf(schicht[0], schicht[2], gewaehlt));
+      if (berichtFuer("") || gewaehlt === "") teile.push(schichtKnopf("", "ohne Schicht", gewaehlt));
+      document.getElementById("schichtLeiste").innerHTML = teile.join("");
+    }
+
     function formularSperren() {
-      const gesperrt = berichtStatus === "freigegeben";
+      const freigegeben = berichtStatus === "freigegeben";
+      const gesperrt = freigegeben && !nachtragModus;
       document.getElementById("rohtext").readOnly = gesperrt;
       document.getElementById("speichern").disabled = gesperrt;
-      document.getElementById("pruefen").disabled = !berichtId || gesperrt;
-      document.getElementById("freigeben").disabled = !berichtId || gesperrt;
+      document.getElementById("pruefen").disabled = !berichtId || freigegeben;
+      document.getElementById("freigeben").disabled = !berichtId || freigegeben;
+      document.getElementById("nachtrag").hidden = !freigegeben || nachtragModus;
+      document.getElementById("nameFeld").hidden = !nachtragModus;
     }
 
     function pruefungAnzeigen(bericht) {
@@ -221,7 +238,49 @@
         <div class="prueftext">${escapeHtml(bericht.wrap_ergebnis)}</div>`;
     }
 
+    function statusSetzen(bericht, hatVerlauf) {
+      const status = document.getElementById("berichtStatus");
+      let text = "neu";
+      if (bericht && bericht.status === "freigegeben") text = "freigegeben";
+      else if (bericht && hatVerlauf) text = "Entwurf nach Nachtrag";
+      else if (bericht) text = "Entwurf";
+      status.textContent = text;
+      status.className = "status" + (bericht && bericht.status === "freigegeben" ? " freigegeben" : "");
+    }
+
+    async function ladeVerlauf(id) {
+      const lauf = ++verlaufLauf;
+      const ziel = document.getElementById("verlauf");
+      if (!id) {
+        ziel.innerHTML = "<p class=\"leis\">Noch kein Verlauf.</p>";
+        statusSetzen(berichtId ? { status: berichtStatus } : null, false);
+        return;
+      }
+      try {
+        const versionen = await api("/tagesberichte/" + id + "/versionen");
+        if (lauf !== verlaufLauf) return;
+        statusSetzen(berichtFuer(document.getElementById("schicht").value), versionen.length > 0);
+        if (!versionen.length) {
+          ziel.innerHTML = "<p class=\"leis\">Noch kein Nachtrag. Eine freigegebene Fassung bleibt nach einer Änderung hier stehen.</p>";
+          return;
+        }
+        ziel.innerHTML = `<ul class="verlauf">${versionen.map((version) => {
+          const wann = version.archiviert_am
+            ? new Date(version.archiviert_am).toLocaleString("de-DE")
+            : "";
+          const wer = version.geaendert_von || version.freigegeben_von || "Name nicht erfasst";
+          return `<li><span class="leis">${escapeHtml(wann)} · ${escapeHtml(wer)} · Ampel damals: ${escapeHtml(ampelText(version.ampel))}</span><div class="alttext">${escapeHtml(version.rohtext)}</div></li>`;
+        }).join("")}</ul>`;
+      } catch (fehler) {
+        if (lauf !== verlaufLauf) return;
+        ziel.innerHTML = `<p>${escapeHtml(fehler.message)}</p>`;
+      }
+    }
+
     function slotInFormular(schicht) {
+      aktuelleSchicht = schicht;
+      nachtragModus = false;
+      document.getElementById("nachtragVon").value = "";
       slotWechselOhneRueckfrage = true;
       document.getElementById("schicht").value = schicht;
       slotWechselOhneRueckfrage = false;
@@ -231,33 +290,30 @@
       const text = bericht ? bericht.rohtext : "";
       document.getElementById("rohtext").value = text;
       gespeicherterText = text;
-      const status = document.getElementById("berichtStatus");
-      status.textContent = bericht ? statusText(bericht.status) : "neu";
-      status.className = "status" + (bericht && bericht.status === "freigegeben" ? " freigegeben" : "");
-      document.getElementById("schichtHilfe").textContent = schichtUebersicht();
+      statusSetzen(bericht, false);
       pruefungAnzeigen(bericht);
       formularSperren();
-    }
-
-    function schichtUebersicht() {
-      const heute = heuteLokal();
-      const berichte = berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === heute);
-      if (!berichte.length) return "Heute noch nichts gespeichert. Die Auswahl gilt für Frühdienst, Spätdienst oder einen Eintrag ohne Schicht.";
-      const teile = ["", "frueh", "spaet"].map((schicht) => {
-        const bericht = berichte.filter((eintrag) => (eintrag.schicht || "") === schicht).sort((a, b) => b.id - a.id)[0];
-        if (!bericht) return null;
-        return `${schichtName(schicht)}: ${ampelText(bericht.ampel)} (${statusText(bericht.status)})`;
-      }).filter(Boolean);
-      return teile.join(" · ");
+      schichtLeisteZeichnen();
+      ladeVerlauf(berichtId);
     }
 
     function startSchicht() {
-      const heute = heuteLokal();
-      const berichte = berichteCache.filter((bericht) => String(bericht.datum).slice(0, 10) === heute);
-      if (berichte.some((bericht) => !bericht.schicht)) return "";
-      if (berichte.some((bericht) => bericht.schicht === "frueh")) return "frueh";
-      if (berichte.some((bericht) => bericht.schicht === "spaet")) return "spaet";
-      return "";
+      const rang = { gruen: 1, gelb: 2, rot: 3 };
+      let gewaehlt = null;
+      let bester = 0;
+      for (const schicht of SCHICHTEN) {
+        const bericht = berichtFuer(schicht[0]);
+        if (!bericht || !bericht.ampel || !rang[bericht.ampel]) continue;
+        if (rang[bericht.ampel] > bester) {
+          bester = rang[bericht.ampel];
+          gewaehlt = schicht[0];
+        }
+      }
+      if (gewaehlt) return gewaehlt;
+      const erste = SCHICHTEN.find((schicht) => berichtFuer(schicht[0]));
+      if (erste) return erste[0];
+      if (berichtFuer("")) return "";
+      return "frueh";
     }
 
     async function ladeBericht() {
@@ -269,7 +325,7 @@
       berichteCache = berichte;
       const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
       document.getElementById("kindName").textContent = name;
-      document.getElementById("berichtDatum").textContent = new Date().toLocaleDateString("de-DE", {
+      document.getElementById("berichtDatum").textContent = datumAusIso(ansichtsDatum).toLocaleDateString("de-DE", {
         weekday: "long", day: "numeric", month: "long", year: "numeric",
       });
       const profil = [
@@ -284,15 +340,23 @@
       slotInFormular(startSchicht());
     }
 
-    async function oeffneKind(id) {
+    async function oeffneKind(id, datum, von) {
       kindId = id;
+      ansichtsDatum = datum || heuteLokal();
+      herkunft = von === "woche" ? "woche" : "heute";
+      document.getElementById("zurueck").textContent = herkunft === "woche" ? "← Zur Woche" : "← Zur Übersicht";
       document.getElementById("formHinweis").textContent = "";
       try {
         await ladeBericht();
         zeige("bericht");
       } catch (fehler) {
-        document.getElementById("heuteKarten").innerHTML = `<p>${escapeHtml(fehler.message)}</p>`;
-        zeige("heute");
+        const text = `<p>${escapeHtml(fehler.message)}</p>`;
+        if (herkunft === "woche") {
+          document.getElementById("wochenKörper").innerHTML = `<tr><td colspan="8">${escapeHtml(fehler.message)}</td></tr>`;
+        } else {
+          document.getElementById("heuteKarten").innerHTML = text;
+        }
+        zeige(herkunft);
       }
     }
 
@@ -306,29 +370,40 @@
         setzeHinweis("Bitte einen Text eingeben.");
         return;
       }
-      if (berichtStatus === "freigegeben") {
-        setzeHinweis("Dieser Bericht ist freigegeben und kann nicht geändert werden.");
+      if (berichtStatus === "freigegeben" && !nachtragModus) {
+        setzeHinweis("Für eine Änderung zuerst „Bearbeiten / Nachtrag“ wählen.");
         return;
       }
       const schicht = document.getElementById("schicht").value || null;
+      const von = document.getElementById("nachtragVon").value.trim();
+      const warNachtrag = nachtragModus;
       try {
+        let gespeichert = null;
         if (berichtId) {
-          await api("/tagesberichte/" + berichtId, {
+          const koerper = { rohtext };
+          if (von) koerper.von = von;
+          gespeichert = await api("/tagesberichte/" + berichtId, {
             method: "PUT",
-            body: JSON.stringify({ rohtext }),
+            body: JSON.stringify(koerper),
           });
         } else {
           await api("/tagesberichte/", {
             method: "POST",
             body: JSON.stringify({
               kind_id: kindId,
-              datum: heuteLokal() + "T00:00:00",
+              datum: ansichtsDatum + "T00:00:00",
               rohtext,
               schicht,
             }),
           });
         }
-        setzeHinweis("Gespeichert.");
+        if (warNachtrag && gespeichert && gespeichert.status === "freigegeben") {
+          setzeHinweis("Keine Änderung. Die Freigabe bleibt bestehen.");
+        } else if (warNachtrag) {
+          setzeHinweis("Nachtrag gespeichert. Die alte Ampel ist veraltet. Bitte erneut prüfen und freigeben.");
+        } else {
+          setzeHinweis("Gespeichert.");
+        }
         await ladeBericht();
         slotInFormular(schicht || "");
       } catch (fehler) {
@@ -361,7 +436,7 @@
         setzeHinweis("Bitte den Bericht zuerst speichern.");
         return;
       }
-      if (!window.confirm("Bericht freigeben? Danach ist er nicht mehr änderbar.")) return;
+      if (!window.confirm("Bericht freigeben? Ein späterer Nachtrag bleibt im Verlauf sichtbar.")) return;
       try {
         await api("/tagesberichte/" + berichtId + "/freigeben", { method: "POST" });
         const schicht = document.getElementById("schicht").value;
@@ -373,26 +448,34 @@
       }
     }
 
-    document.getElementById("schicht").addEventListener("change", () => {
-      if (slotWechselOhneRueckfrage) return;
-      const neu = document.getElementById("schicht").value;
+    function wechsleSchicht(neu) {
+      if (neu === aktuelleSchicht) return;
       if (document.getElementById("rohtext").value !== gespeicherterText) {
         const verwerfen = window.confirm("Ungespeicherte Änderungen verwerfen und die andere Schicht öffnen?");
         if (!verwerfen) {
-          const bisher = berichtId ? (berichteCache.find((bericht) => bericht.id === berichtId)?.schicht || "") : "";
           slotWechselOhneRueckfrage = true;
-          document.getElementById("schicht").value = bisher;
+          document.getElementById("schicht").value = aktuelleSchicht;
           slotWechselOhneRueckfrage = false;
           return;
         }
       }
       slotInFormular(neu);
       setzeHinweis("");
+    }
+
+    document.getElementById("schicht").addEventListener("change", () => {
+      if (slotWechselOhneRueckfrage) return;
+      wechsleSchicht(document.getElementById("schicht").value);
+    });
+
+    document.getElementById("schichtLeiste").addEventListener("click", (event) => {
+      const knopf = event.target.closest("[data-schicht]");
+      if (knopf) wechsleSchicht(knopf.dataset.schicht);
     });
 
     document.getElementById("heuteKarten").addEventListener("click", (event) => {
       const karte = event.target.closest("[data-kind]");
-      if (karte) oeffneKind(Number(karte.dataset.kind));
+      if (karte) oeffneKind(Number(karte.dataset.kind), karte.dataset.datum, "heute");
     });
 
     document.querySelector("nav").addEventListener("click", (event) => {
@@ -402,10 +485,16 @@
       zeige(link.dataset.ansicht);
     });
 
-    document.getElementById("zurueck").addEventListener("click", () => zeige("heute"));
+    document.getElementById("zurueck").addEventListener("click", () => zeige(herkunft));
     document.getElementById("speichern").addEventListener("click", speichern);
     document.getElementById("pruefen").addEventListener("click", pruefen);
     document.getElementById("freigeben").addEventListener("click", freigeben);
+    document.getElementById("nachtrag").addEventListener("click", () => {
+      nachtragModus = true;
+      formularSperren();
+      document.getElementById("rohtext").focus();
+      setzeHinweis("Die bisherige Fassung bleibt im Verlauf. Nach dem Speichern sind Ampel und Freigabe veraltet und müssen neu gesetzt werden.");
+    });
     document.getElementById("wocheZurueck").addEventListener("click", () => {
       wochenStart = addTage(wochenStart, -7);
       ladeWoche();
@@ -443,8 +532,11 @@
         koerper.innerHTML = woche.kinder.map((kind) => {
           const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
           const zellen = kind.tage.map((tag) => {
-            const darstellung = zelle(tag.eintraege, name, tag.datum);
-            return `<td class="${tag.datum === heute ? "heute" : ""}"><div class="zelle">${darstellung.punkte}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span></div></td>`;
+            const darstellung = tagesdarstellung(tag, name);
+            const hinweis = tag.hinweis
+              ? `<span class="tageshinweis">${escapeHtml(tag.hinweis)}</span>`
+              : "";
+            return `<td class="${tag.datum === heute ? "heute" : ""}"><button type="button" class="tagknopf" data-kind="${kind.id}" data-datum="${escapeHtml(tag.datum)}"><span class="zelle">${darstellung.punkt}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span>${hinweis}</span></button></td>`;
           }).join("");
           return `<tr><td><button type="button" class="link" data-kind="${kind.id}">${escapeHtml(name)}</button></td>${zellen}</tr>`;
         }).join("");
@@ -456,7 +548,8 @@
 
     document.getElementById("wochenKörper").addEventListener("click", (event) => {
       const knopf = event.target.closest("[data-kind]");
-      if (knopf) oeffneKind(Number(knopf.dataset.kind));
+      if (!knopf) return;
+      oeffneKind(Number(knopf.dataset.kind), knopf.dataset.datum, "woche");
     });
 
     const parameter = new URLSearchParams(location.search);

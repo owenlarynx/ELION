@@ -34,7 +34,7 @@ export OLLAMA_MODEL=llama3.1
 
 `OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Zwischen den Markierungen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` kann später der Ra-Thor-Wrap-Text stehen.
 
-Beim Start wird eine fehlende Spalte `schicht` in einer bestehenden SQLite-Datei ergänzt. Werte sind `frueh` und `spaet`; ohne Schicht bleibt das Feld leer. Liegen für einen Tag Schichtberichte vor, zeigt das Wochenraster zwei Punkte (links Frühdienst, rechts Spätdienst).
+Beim Start werden fehlende Tabellen und Spalten in einer bestehenden SQLite-Datei ergänzt. Schichtwerte sind `frueh`, `mittel`, `spaet` und `nacht` (Frühdienst, Mitteldienst mit etwa 12 Stunden, Spätdienst, Nachtdienst). Bestehende Werte `frueh` und `spaet` bleiben gültig. Startseite und Wochenraster zeigen pro Kind und Tag nur die schlechteste Ampel (Rot vor Gelb vor Grün). Fehlende oder ungeprüfte Schichten stehen als kurzer Hinweis daneben. Die einzelnen Schichten sieht man im Bericht. Ein freigegebener Bericht lässt sich als Nachtrag ändern. Die bisherige Fassung bleibt im Verlauf, die Ampel gilt als veraltet, und der Bericht muss erneut geprüft und freigegeben werden.
 
 ## Tests
 

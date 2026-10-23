@@ -191,7 +191,34 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .ampelzeile { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 
-.prueftext, .profiltext { white-space: pre-wrap; margin: 0; }
+.prueftext, .profiltext, .alttext { white-space: pre-wrap; margin: 0; }
+
+.verlauf { list-style: none; padding: 0; margin: 0; }
+.verlauf li { border-top: 1px solid var(--linie); padding: 10px 0; }
+.alttext { margin-top: 4px; }
+
+.tageshinweis {
+  display: block;
+  color: var(--leis);
+  font-size: 0.75rem;
+  font-weight: 500;
+  max-width: 8rem;
+  line-height: 1.3;
+}
+
+.schichtleiste { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
+button.schichtwahl, button.tagknopf {
+  background: white;
+  color: inherit;
+  border: 1px solid var(--linie);
+  text-align: left;
+}
+
+button.schichtwahl { display: flex; align-items: center; gap: 8px; width: 100%; }
+button.schichtwahl.aktiv { border-color: var(--akzent); background: var(--akzent-hell); }
+button.schichtwahl.voll { grid-column: 1 / -1; }
+button.tagknopf { border: 0; background: transparent; width: 100%; padding: 2px; cursor: pointer; }
 
 .label { display: block; color: var(--leis); font-size: 0.82rem; font-weight: 650; }
 
@@ -229,6 +256,7 @@ button.link {
 }
 
 .zelle { display: grid; justify-items: center; gap: 4px; }
+.zelle .kuerzel { margin-left: 0; }
 
 .liste { list-style: none; padding: 0; margin: 12px 0 0; }
 

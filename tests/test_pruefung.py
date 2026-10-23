@@ -118,6 +118,22 @@ def test_prompt_enthaelt_medikation_und_profil(client, ollama):
     assert "nicht das Kind" in system
 
 
+@pytest.mark.parametrize(
+    ("schicht", "label"),
+    [
+        ("mittel", "Mitteldienst (etwa 12 Stunden)"),
+        ("nacht", "Nachtdienst"),
+    ],
+)
+def test_prompt_nennt_mittel_und_nacht(client, ollama, schicht, label):
+    kind = kind_anlegen(client, vorname="Pico")
+    bericht = bericht_anlegen(client, kind["id"], schicht=schicht, rohtext="Schicht notiert.")
+    ollama["inhalt"] = modell_json("gruen")
+    assert pruefen(client, bericht["id"])["ampel"] == "gruen"
+    text = ollama["payloads"][-1]["json"]["messages"][1]["content"]
+    assert label in text
+
+
 def test_prompt_pfad_und_ollama_env(client, ollama, monkeypatch, tmp_path):
     vorlage = tmp_path / "eigene.md"
     vorlage.write_text(

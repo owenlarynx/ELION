@@ -39,12 +39,13 @@ def get_db():
         db.close()
 
 
-def ensure_schema():
+def ensure_schema(bind=None):
     """Create tables and add columns introduced after the first pilot database."""
-    Base.metadata.create_all(bind=engine)
-    if engine.dialect.name != "sqlite":
+    ziel = bind or engine
+    Base.metadata.create_all(bind=ziel)
+    if ziel.dialect.name != "sqlite":
         return
-    with engine.begin() as conn:
+    with ziel.begin() as conn:
         rows = conn.execute(text("PRAGMA table_info(tagesberichte)")).fetchall()
         if not rows:
             return

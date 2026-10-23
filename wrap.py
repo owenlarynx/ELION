@@ -123,7 +123,12 @@ def baue_prompt(profil: str, medikation: str, rohtext: str, schicht: str | None)
         raise FileNotFoundError(pfad.name) from fehler
     system, auftrag = teile_vorlage(vorlage)
     auftrag = ohne_ra_thor_marken(auftrag)
-    schicht_label = {"frueh": "Frühdienst", "spaet": "Spätdienst"}.get(schicht, "nicht angegeben")
+    schicht_label = {
+        "frueh": "Frühdienst",
+        "mittel": "Mitteldienst (etwa 12 Stunden)",
+        "spaet": "Spätdienst",
+        "nacht": "Nachtdienst",
+    }.get(schicht, "nicht angegeben")
     ersatz = {
         "{schicht}": schicht_label,
         "{profil}": profil,

@@ -22,7 +22,17 @@ class BerichtStatus(enum.Enum):
 
 class Schicht(enum.Enum):
     frueh = "frueh"
+    mittel = "mittel"
     spaet = "spaet"
+    nacht = "nacht"
+
+
+SCHICHT_REIHENFOLGE = {
+    "frueh": 0,
+    "mittel": 1,
+    "spaet": 2,
+    "nacht": 3,
+}
 
 
 class KontaktTyp(enum.Enum):
@@ -98,3 +108,19 @@ class Tagesbericht(Base):
     erstellt_am = Column(DateTime, default=utc_now)
     freigegeben_am = Column(DateTime, nullable=True)
     kind = relationship("Kind", back_populates="berichte")
+    versionen = relationship("BerichtVersion", back_populates="bericht")
+
+
+class BerichtVersion(Base):
+    __tablename__ = "bericht_versionen"
+    id = Column(Integer, primary_key=True, index=True)
+    bericht_id = Column(Integer, ForeignKey("tagesberichte.id"), nullable=False, index=True)
+    rohtext = Column(Text, nullable=False)
+    schicht = Column(Enum(Schicht), nullable=True)
+    ampel = Column(Enum(Ampel), nullable=True)
+    wrap_ergebnis = Column(Text, nullable=True)
+    freigegeben_am = Column(DateTime, nullable=True)
+    freigegeben_von = Column(String, nullable=True)
+    geaendert_von = Column(String, nullable=True)
+    archiviert_am = Column(DateTime, default=utc_now, nullable=False)
+    bericht = relationship("Tagesbericht", back_populates="versionen")
