@@ -73,7 +73,8 @@ Nicht gleichzeitig den Ollama-Dienst des Betriebssystems und Compose auf Port 11
 
 Die Prüfanweisung steht in `prompts/ra_thor_wrap.md`, nicht im Python-Code.
 `# System` und `# Auftrag` bleiben die geltende deutsche Prüfanweisung samt JSON-Vertrag
-(`ampel`, `hinweise`, `kurzbegruendung`).
+(`ampel`, `umformulierungen`, `hinweise`, `kurzbegruendung`, `verbesserte_fassung`).
+Standardmodell ist `llama3.1`. Ein größeres Modell wie `qwen2.5:14b` oder `llama3.1:70b` formuliert auf Deutsch sicherer, wenn die Hardware das trägt. Der Name steht in `OLLAMA_MODEL`.
 
 Den späteren Ra-Thor-Wrap-Text zwischen diese beiden Zeilen setzen:
 

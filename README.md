@@ -20,7 +20,7 @@ Dann http://localhost:8000 öffnen.
 
 Die Oberfläche hat drei Arbeitsansichten: die Tagesübersicht, den Bericht eines Kindes und das Wochenraster. Kinder, Medikamente und Kontakte liegen unter Verwaltung.
 
-Die Prüfung eines Berichts läuft über Ollama und erwartet eine JSON-Antwort mit Ampel, Hinweisen und kurzer Begründung. Wenn Ollama nicht erreichbar ist, bleibt die Ampel leer; es wird kein Grün gesetzt. Installation unter Windows und Linux, Docker Compose und die Prüfvorlage stehen in [docs/OLLAMA.md](docs/OLLAMA.md).
+Die Prüfung eines Berichts läuft über Ollama in einem Aufruf und erwartet eine JSON-Antwort mit Ampel, Umformulierungen (Zitat und Vorschlag), kurzen pädagogischen Hinweisen und einer verbesserten Fassung. Fehlende Angaben stehen darin als Platzhalter `[Bitte ergänzen: …]`. Zitate, die im Text nicht vorkommen, werden verworfen. Sätze mit neuen Handlungen, Orten oder Gegenständen ebenfalls. Fehlt danach ein Fakt aus dem Original, bleibt eine rechtschreibkorrigierte Fassung des Originals. Ist keine Medikation hinterlegt, entfallen Medikationshinweise, Medikationsplatzhalter und Sätze wie „Keine Medikation wurde gegeben“. Wenn Ollama nicht erreichbar ist, bleibt die Ampel leer; es wird kein Grün gesetzt. Installation unter Windows und Linux, Docker Compose und die Prüfvorlage stehen in [docs/OLLAMA.md](docs/OLLAMA.md).
 
 ## Konfiguration
 
@@ -32,9 +32,9 @@ export OLLAMA_URL=http://localhost:11434
 export OLLAMA_MODEL=llama3.1
 ```
 
-`OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Zwischen den Markierungen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` kann später der Ra-Thor-Wrap-Text stehen.
+`OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname, Standard ist `llama3.1`. Für deutlich besseres Deutsch eignet sich ein größeres Modell, wenn die Hardware reicht, zum Beispiel `qwen2.5:14b` oder `llama3.1:70b`. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Zwischen den Markierungen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` kann später der Ra-Thor-Wrap-Text stehen.
 
-Beim Start wird eine fehlende Spalte `schicht` in einer bestehenden SQLite-Datei ergänzt. Werte sind `frueh` und `spaet`; ohne Schicht bleibt das Feld leer. Liegen für einen Tag Schichtberichte vor, zeigt das Wochenraster zwei Punkte (links Frühdienst, rechts Spätdienst).
+Beim Start werden fehlende Tabellen und Spalten in einer bestehenden SQLite-Datei ergänzt. Schichtwerte sind `frueh`, `mittel`, `spaet` und `nacht` (Frühdienst, Mitteldienst mit etwa 12 Stunden, Spätdienst, Nachtdienst). Bestehende Werte `frueh` und `spaet` bleiben gültig. Startseite und Wochenraster zeigen pro Kind und Tag nur die schlechteste Ampel (Rot vor Gelb vor Grün). Fehlende oder ungeprüfte Schichten stehen als kurzer Hinweis daneben. Die einzelnen Schichten sieht man im Bericht. Ein freigegebener Bericht lässt sich als Nachtrag ändern. Die bisherige Fassung bleibt im Verlauf, die Ampel gilt als veraltet, und der Bericht muss erneut geprüft und freigegeben werden.
 
 ## Tests
 
