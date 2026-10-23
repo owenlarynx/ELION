@@ -1,0 +1,86 @@
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Enum
+from sqlalchemy.orm import relationship
+from database import Base
+import enum
+from datetime import datetime
+
+class Rolle(enum.Enum):
+    fachkraft = "fachkraft"
+    leitung = "leitung"
+
+class Ampel(enum.Enum):
+    gruen = "gruen"
+    gelb = "gelb"
+    rot = "rot"
+
+class BerichtStatus(enum.Enum):
+    entwurf = "entwurf"
+    freigegeben = "freigegeben"
+
+class KontaktTyp(enum.Enum):
+    eltern = "eltern"
+    asd = "asd"
+    vormund = "vormund"
+    sonstige = "sonstige"
+
+class Mitarbeiter(Base):
+    __tablename__ = "mitarbeiter"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    name = Column(String)
+    passwort_hash = Column(String)
+    rolle = Column(Enum(Rolle), default=Rolle.fachkraft)
+    aktiv = Column(Boolean, default=True)
+
+class Kind(Base):
+    __tablename__ = "kinder"
+    id = Column(Integer, primary_key=True, index=True)
+    vorname = Column(String, nullable=False)
+    nachname = Column(String, nullable=True)
+    aktiv = Column(Boolean, default=True)
+    paragraph = Column(String, nullable=True)
+    besonderheiten = Column(Text, nullable=True)
+    dokumentationshinweise = Column(Text, nullable=True)
+    erstellt_am = Column(DateTime, default=datetime.utcnow)
+    geaendert_am = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    medikamente = relationship("Medikament", back_populates="kind")
+    kontakte = relationship("Kontakt", back_populates="kind")
+    berichte = relationship("Tagesbericht", back_populates="kind")
+
+class Medikament(Base):
+    __tablename__ = "medikamente"
+    id = Column(Integer, primary_key=True, index=True)
+    kind_id = Column(Integer, ForeignKey("kinder.id"))
+    name = Column(String, nullable=False)
+    dosierung = Column(String, nullable=True)
+    einnahmezeit = Column(String, nullable=True)
+    hinweis = Column(Text, nullable=True)
+    aktiv = Column(Boolean, default=True)
+    kind = relationship("Kind", back_populates="medikamente")
+
+class Kontakt(Base):
+    __tablename__ = "kontakte"
+    id = Column(Integer, primary_key=True, index=True)
+    kind_id = Column(Integer, ForeignKey("kinder.id"))
+    typ = Column(Enum(KontaktTyp))
+    name = Column(String, nullable=False)
+    telefon = Column(String, nullable=True)
+    email = Column(String, nullable=True)
+    hinweis = Column(Text, nullable=True)
+    aktiv = Column(Boolean, default=True)
+    kind = relationship("Kind", back_populates="kontakte")
+
+class Tagesbericht(Base):
+    __tablename__ = "tagesberichte"
+    id = Column(Integer, primary_key=True, index=True)
+    kind_id = Column(Integer, ForeignKey("kinder.id"))
+    datum = Column(DateTime, nullable=False)
+    rohtext = Column(Text, nullable=False)
+    wrap_ergebnis = Column(Text, nullable=True)
+    ampel = Column(Enum(Ampel), nullable=True)
+    status = Column(Enum(BerichtStatus), default=BerichtStatus.entwurf)
+    erstellt_von = Column(String, nullable=True)
+    freigegeben_von = Column(String, nullable=True)
+    erstellt_am = Column(DateTime, default=datetime.utcnow)
+    freigegeben_am = Column(DateTime, nullable=True)
+    kind = relationship("Kind", back_populates="berichte")
