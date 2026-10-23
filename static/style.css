@@ -159,7 +159,8 @@ input, select, textarea {
   font: inherit;
 }
 
-textarea { min-height: 200px; resize: vertical; }
+textarea { min-height: 88px; resize: vertical; }
+#rohtext { min-height: 220px; }
 
 .aktionen, .wochenleiste, .zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
