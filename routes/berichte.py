@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict, Field
@@ -30,6 +32,9 @@ class BerichtOut(BaseModel):
     schicht: Optional[Schicht]
     rohtext: str
     wrap_ergebnis: Optional[str]
+    verbesserte_fassung: Optional[str] = None
+    hinweise: List[str] = []
+    kurzbegruendung: Optional[str] = None
     ampel: Optional[Ampel]
     status: BerichtStatus
     erstellt_von: Optional[str]
@@ -267,6 +272,8 @@ def _fassung_archivieren(db: Session, bericht: Tagesbericht, geaendert_von: Opti
         schicht=bericht.schicht,
         ampel=bericht.ampel,
         wrap_ergebnis=bericht.wrap_ergebnis,
+        verbesserte_fassung=bericht.verbesserte_fassung,
+        pruef_meta=bericht.pruef_meta,
         freigegeben_am=bericht.freigegeben_am,
         freigegeben_von=bericht.freigegeben_von,
         geaendert_von=geaendert_von,
@@ -305,6 +312,8 @@ def bericht_aendern(bericht_id: int, daten: BerichtUpdate, db: Session = Depends
         bericht.freigegeben_von = None
     bericht.ampel = None
     bericht.wrap_ergebnis = None
+    bericht.verbesserte_fassung = None
+    bericht.pruef_meta = None
     if text_aendert:
         bericht.rohtext = neuer_text
     if schicht_aendert:
@@ -337,14 +346,24 @@ async def bericht_pruefen(bericht_id: int, db: Session = Depends(get_db)):
         kind.besonderheiten,
         kind.dokumentationshinweise,
     )
+    schicht = bericht.schicht.value if bericht.schicht else None
     ergebnis = await pruefe_bericht(
         profil,
-        medikamente_text(medikamente),
+        medikamente_text(medikamente, schicht),
         bericht.rohtext,
-        bericht.schicht.value if bericht.schicht else None,
+        schicht,
     )
     bericht.wrap_ergebnis = ergebnis.text
     bericht.ampel = Ampel(ergebnis.ampel) if ergebnis.ampel else None
+    if ergebnis.ampel:
+        bericht.verbesserte_fassung = ergebnis.verbesserte_fassung
+        bericht.pruef_meta = json.dumps(
+            {"hinweise": ergebnis.hinweise, "kurzbegruendung": ergebnis.kurzbegruendung or ""},
+            ensure_ascii=False,
+        )
+    else:
+        bericht.verbesserte_fassung = None
+        bericht.pruef_meta = None
     db.commit()
     db.refresh(bericht)
     return bericht

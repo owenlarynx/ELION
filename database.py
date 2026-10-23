@@ -45,10 +45,18 @@ def ensure_schema(bind=None):
     Base.metadata.create_all(bind=ziel)
     if ziel.dialect.name != "sqlite":
         return
+    nachruesten = {
+        "tagesberichte": ("schicht", "verbesserte_fassung", "pruef_meta"),
+        "bericht_versionen": ("verbesserte_fassung", "pruef_meta"),
+    }
     with ziel.begin() as conn:
-        rows = conn.execute(text("PRAGMA table_info(tagesberichte)")).fetchall()
-        if not rows:
-            return
-        spalten = {row[1] for row in rows}
-        if "schicht" not in spalten:
-            conn.execute(text("ALTER TABLE tagesberichte ADD COLUMN schicht VARCHAR"))
+        for tabelle, namen in nachruesten.items():
+            rows = conn.execute(text(f"PRAGMA table_info({tabelle})")).fetchall()
+            if not rows:
+                continue
+            vorhanden = {row[1] for row in rows}
+            for name in namen:
+                if name in vorhanden:
+                    continue
+                typ = "VARCHAR" if name == "schicht" else "TEXT"
+                conn.execute(text(f"ALTER TABLE {tabelle} ADD COLUMN {name} {typ}"))

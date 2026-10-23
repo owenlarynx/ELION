@@ -28,6 +28,22 @@ def test_ensure_schema_ergaenzt_alte_sqlite(tmp_path):
             "INSERT INTO tagesberichte (id, kind_id, datum, rohtext, status) "
             "VALUES (1, 1, '2026-10-19 08:00:00', 'Alter Text', 'freigegeben')"
         ))
+        conn.execute(text(
+            """
+            CREATE TABLE bericht_versionen (
+                id INTEGER PRIMARY KEY,
+                bericht_id INTEGER,
+                rohtext TEXT,
+                schicht VARCHAR,
+                ampel VARCHAR,
+                wrap_ergebnis TEXT,
+                freigegeben_am DATETIME,
+                freigegeben_von VARCHAR,
+                geaendert_von VARCHAR,
+                archiviert_am DATETIME
+            )
+            """
+        ))
     ensure_schema(alt)
     with alt.begin() as conn:
         spalten = {row[1] for row in conn.execute(text("PRAGMA table_info(tagesberichte)"))}
@@ -37,8 +53,13 @@ def test_ensure_schema_ergaenzt_alte_sqlite(tmp_path):
         }
         rohtext = conn.execute(text("SELECT rohtext FROM tagesberichte WHERE id = 1")).scalar()
         schicht = conn.execute(text("SELECT schicht FROM tagesberichte WHERE id = 1")).scalar()
+        versionsspalten = {row[1] for row in conn.execute(text("PRAGMA table_info(bericht_versionen)"))}
     alt.dispose()
     assert "schicht" in spalten
+    assert "verbesserte_fassung" in spalten
+    assert "pruef_meta" in spalten
     assert "bericht_versionen" in tabellen
+    assert "verbesserte_fassung" in versionsspalten
+    assert "pruef_meta" in versionsspalten
     assert rohtext == "Alter Text"
     assert schicht is None

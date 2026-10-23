@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import httpx
@@ -28,6 +28,61 @@ AMPEL_LABEL = {"gruen": "Grün", "gelb": "Gelb", "rot": "Rot"}
 class PruefErgebnis:
     ampel: str | None
     text: str
+    hinweise: list[str] = field(default_factory=list)
+    verbesserte_fassung: str | None = None
+    kurzbegruendung: str | None = None
+
+
+_SCHICHT_ZEIT = {
+    "frueh": ("früh", "frueh", "morgen", "vormittag", "mittag"),
+    "mittel": (
+        "früh", "frueh", "morgen", "vormittag", "mittag", "nachmittag",
+        "abend", "spät", "spaet", "tagsüber", "tagsueber",
+    ),
+    "spaet": ("nachmittag", "abend", "spät", "spaet"),
+    "nacht": ("nacht",),
+}
+_JEDE_SCHICHT = (
+    "täglich", "taeglich", "jeden tag", "bei bedarf", "dauerhaft",
+    "alle schichten", "durchgehend",
+)
+_KEINE_MEDIKATION = (
+    "Keine Medikation für diese Schicht hinterlegt. "
+    "Medikation weder in den Hinweisen noch in der verbesserten Fassung erwähnen "
+    "und nicht als fehlende Angabe werten."
+)
+PLATZHALTER = re.compile(r"\[Bitte ergänzen:[^\]]+\]", re.IGNORECASE)
+_ZITAT_MUSTER = (
+    re.compile(r"„([^“]{4,180})“"),
+    re.compile(r"«([^»]{4,180})»"),
+    re.compile(r"‚([^‘]{4,180})‘"),
+    re.compile(r"(?<![\w])\"([^\"]{4,180})\"(?![\w])"),
+    re.compile(r"(?<![\w])'([^']{4,180})'(?![\w])"),
+)
+
+
+def _zeitwort(text: str, wort: str) -> bool:
+    return re.search(rf"(?<![\w]){re.escape(wort)}", text, flags=re.IGNORECASE) is not None
+
+
+def medikament_passt(einnahmezeit: str | None, schicht: str | None) -> bool:
+    """Ob eine Einnahmezeit zu dieser Schicht gehört. Unklare Zeiten gelten für jede Schicht."""
+    if schicht not in _SCHICHT_ZEIT:
+        return True
+    text = (einnahmezeit or "").strip().lower()
+    if not text or any(_zeitwort(text, wort) for wort in _JEDE_SCHICHT):
+        return True
+    if any(_zeitwort(text, wort) for wort in _SCHICHT_ZEIT[schicht]):
+        return True
+    fremd = [
+        wort
+        for schluessel, woerter in _SCHICHT_ZEIT.items()
+        if schluessel != schicht
+        for wort in woerter
+    ]
+    if any(_zeitwort(text, wort) for wort in fremd):
+        return False
+    return True
 
 
 def kind_profiltext(vorname: str, nachname: str | None, besonderheiten: str | None, dokumentationshinweise: str | None) -> str:
@@ -39,11 +94,12 @@ def kind_profiltext(vorname: str, nachname: str | None, besonderheiten: str | No
     )
 
 
-def medikamente_text(medikamente: list) -> str:
-    if not medikamente:
-        return "Keine aktive Medikation hinterlegt."
-    zeilen = []
-    for med in medikamente:
+def medikamente_text(medikamente: list, schicht: str | None = None) -> str:
+    passend = [med for med in medikamente if medikament_passt(getattr(med, "einnahmezeit", None), schicht)]
+    if not passend:
+        return _KEINE_MEDIKATION
+    zeilen = ["Nur diese Medikation ist für die Schicht relevant. Andere Zeiten nicht ansprechen."]
+    for med in passend:
         teile = [med.name]
         if med.dosierung:
             teile.append(med.dosierung)
@@ -171,6 +227,68 @@ def _ampel_aus_wert(wert) -> str | None:
     return AMPEL_WERTE.get(schluessel)
 
 
+def hat_platzhalter(text: str | None) -> bool:
+    return bool(text and PLATZHALTER.search(text))
+
+
+def zitate(text: str) -> list[str]:
+    if not text:
+        return []
+    funde = []
+    for muster in _ZITAT_MUSTER:
+        funde.extend(treffer.strip() for treffer in muster.findall(text) if treffer and treffer.strip())
+    return funde
+
+
+def _norm(text: str) -> str:
+    text = text.lower().replace("ß", "ss")
+    text = text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue")
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def zitat_belegt(zitat: str, rohtext: str) -> bool:
+    if not (rohtext or "").strip():
+        return True
+    normal = _norm(zitat)
+    quelle = _norm(rohtext)
+    if normal and normal in quelle:
+        return True
+    knapp = re.sub(r"[^\w\s]", "", normal, flags=re.UNICODE)
+    quelle_knapp = re.sub(r"[^\w\s]", "", quelle, flags=re.UNICODE)
+    return bool(knapp) and knapp in quelle_knapp
+
+
+def hinweise_filtern(hinweise: list[str], rohtext: str) -> list[str]:
+    behalten = []
+    for hinweis in hinweise:
+        if all(zitat_belegt(zitat, rohtext) for zitat in zitate(hinweis)):
+            behalten.append(hinweis)
+    return behalten
+
+
+def begruendung_filtern(text: str, rohtext: str) -> str:
+    text = (text or "").strip()
+    if not text:
+        return ""
+    saetze = re.split(r"(?<=[.!?])\s+", text)
+    behalten = [
+        satz
+        for satz in saetze
+        if all(zitat_belegt(zitat, rohtext) for zitat in zitate(satz))
+    ]
+    return " ".join(behalten).strip()
+
+
+def _fassung(wert) -> str | None:
+    if not isinstance(wert, str):
+        return None
+    text = wert.strip()
+    if not text:
+        return None
+    return text[:8000]
+
+
 def _hinweise(wert) -> list[str]:
     if isinstance(wert, str) and wert.strip():
         return [wert.strip()]
@@ -193,18 +311,23 @@ def _ohne_ampel(text: str) -> PruefErgebnis:
     return PruefErgebnis(ampel=None, text=text)
 
 
-def parse_pruef_antwort(roh: str) -> PruefErgebnis:
+def parse_pruef_antwort(roh: str, rohtext: str = "") -> PruefErgebnis:
     daten = _json_objekt(roh)
     if not isinstance(daten, dict):
         return _ohne_ampel(
             "Die Prüfung hat kein lesbares Ergebnis geliefert. Es wurde keine Ampel gesetzt."
         )
     ampel = _ampel_aus_wert(daten.get("ampel"))
-    hinweise = _hinweise(daten.get("hinweise"))
+    hinweise = hinweise_filtern(_hinweise(daten.get("hinweise")), rohtext)
     begruendung = daten.get("kurzbegruendung") or daten.get("begruendung") or ""
     if not isinstance(begruendung, str):
         begruendung = str(begruendung)
-    begruendung = begruendung.strip()
+    begruendung = begruendung_filtern(begruendung, rohtext)
+    fassung = _fassung(
+        daten.get("verbesserte_fassung")
+        or daten.get("verbesserteFassung")
+        or daten.get("fassung")
+    )
     if ampel is None:
         teile = ["Die Prüfung enthält keine gültige Ampel. Es wurde keine Ampel gesetzt."]
         if begruendung:
@@ -213,7 +336,13 @@ def parse_pruef_antwort(roh: str) -> PruefErgebnis:
             teile.append("Hinweise:")
             teile.extend(f"- {hinweis}" for hinweis in hinweise)
         return _ohne_ampel("\n".join(teile))
-    return PruefErgebnis(ampel=ampel, text=_formatiere(ampel, hinweise, begruendung))
+    return PruefErgebnis(
+        ampel=ampel,
+        text=_formatiere(ampel, hinweise, begruendung),
+        hinweise=hinweise,
+        verbesserte_fassung=fassung,
+        kurzbegruendung=begruendung or None,
+    )
 
 
 def _nicht_moeglich(grund: str) -> PruefErgebnis:
@@ -239,9 +368,10 @@ async def pruefe_bericht(profil: str, medikation: str, rohtext: str, schicht: st
         ],
         "stream": False,
         "format": "json",
+        "options": {"temperature": 0.2},
     }
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=90.0) as client:
             antwort = await client.post(ollama_chat_url(), json=payload)
             antwort.raise_for_status()
             body = antwort.json()
@@ -254,4 +384,4 @@ async def pruefe_bericht(profil: str, medikation: str, rohtext: str, schicht: st
     inhalt = message.get("content") if isinstance(message, dict) else None
     if not isinstance(inhalt, str):
         return _nicht_moeglich("die Antwort von Ollama war unvollständig")
-    return parse_pruef_antwort(inhalt)
+    return parse_pruef_antwort(inhalt, rohtext)

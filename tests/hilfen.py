@@ -24,8 +24,8 @@ def pruefen(client, bericht_id):
     return antwort.json()
 
 
-def modell_json(ampel, hinweise=None, begruendung="Die Dokumentation ist nachvollziehbar."):
-    return json.dumps(
-        {"ampel": ampel, "hinweise": hinweise or [], "kurzbegruendung": begruendung},
-        ensure_ascii=False,
-    )
+def modell_json(ampel, hinweise=None, begruendung="Die Dokumentation ist nachvollziehbar.", fassung=None):
+    daten = {"ampel": ampel, "hinweise": hinweise or [], "kurzbegruendung": begruendung}
+    if fassung is not None:
+        daten["verbesserte_fassung"] = fassung
+    return json.dumps(daten, ensure_ascii=False)

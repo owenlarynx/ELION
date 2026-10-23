@@ -160,7 +160,79 @@ input, select, textarea {
 }
 
 textarea { min-height: 88px; resize: vertical; }
-#rohtext { min-height: 220px; }
+
+.editor-rahmen {
+  position: relative;
+  margin-top: 4px;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  background: white;
+}
+
+.editor-rahmen textarea,
+.editor-spiegel {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  font: inherit;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#rohtext {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  caret-color: var(--tinte);
+  resize: vertical;
+}
+
+#rohtext::placeholder { color: var(--leis); }
+#rohtext::selection { background: rgba(30, 79, 90, 0.18); color: transparent; }
+
+.editor-spiegel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--tinte);
+}
+
+mark.platzhalter {
+  background: #f6e2a8;
+  color: #6a4b00;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.hinweisliste { margin: 8px 0 0; padding-left: 1.2rem; }
+.hinweisliste li { margin: 4px 0; }
+
+.vergleich {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.vergleichtext {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: white;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 4.5rem;
+}
+
+.vergleichtext del { background: #f8d6d3; text-decoration: none; }
+.vergleichtext ins { background: #d9efdf; text-decoration: none; }
 
 .aktionen, .wochenleiste, .zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
@@ -278,6 +350,6 @@ button.link {
 :focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
 
 @media (max-width: 800px) {
-  .bericht-layout { grid-template-columns: 1fr; }
+  .bericht-layout, .vergleich { grid-template-columns: 1fr; }
   header { align-items: flex-start; }
 }

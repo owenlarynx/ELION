@@ -53,7 +53,10 @@
           </label>
           <p class="hilfe" id="schichtHilfe">Jede Schicht hat eine eigene Ampel. Die Übersicht zeigt nur die schlechteste des Tages.</p>
           <label for="rohtext">Tagesbericht</label>
-          <textarea id="rohtext" placeholder="Sachlich beschreiben: Verlauf, Essen, Schlaf, Kontakte, Medikation (gegeben oder nicht gegeben), besondere Vorkommnisse."></textarea>
+          <div class="editor-rahmen">
+            <pre id="rohtextSpiegel" class="editor-spiegel" aria-hidden="true"></pre>
+            <textarea id="rohtext" placeholder="Sachlich beschreiben: Verlauf, Essen, Schlaf, Kontakte, Medikation (gegeben oder nicht gegeben), besondere Vorkommnisse."></textarea>
+          </div>
           <label id="nameFeld" hidden>Name für den Verlauf
             <input id="nachtragVon" maxlength="80" placeholder="optional">
           </label>
@@ -116,6 +119,7 @@
     let ansichtsDatum = heuteLokal();
     let herkunft = "heute";
     let aktuelleSchicht = "frueh";
+    let verbesserteFassung = "";
 
     const heuteDatum = document.getElementById("heuteDatum");
     heuteDatum.textContent = new Date().toLocaleDateString("de-DE", {
@@ -227,15 +231,134 @@
       document.getElementById("nameFeld").hidden = !nachtragModus;
     }
 
+    function platzhalterMarkup(text) {
+      const re = /\[Bitte ergänzen:[^\]]+\]/gi;
+      let html = "";
+      let letzte = 0;
+      const quelle = String(text ?? "");
+      for (const fund of quelle.matchAll(re)) {
+        html += escapeHtml(quelle.slice(letzte, fund.index));
+        html += `<mark class="platzhalter">${escapeHtml(fund[0])}</mark>`;
+        letzte = fund.index + fund[0].length;
+      }
+      return html + escapeHtml(quelle.slice(letzte));
+    }
+
+    function spiegelAktualisieren() {
+      const feld = document.getElementById("rohtext");
+      const spiegel = document.getElementById("rohtextSpiegel");
+      spiegel.innerHTML = platzhalterMarkup(feld.value) + "\n";
+      spiegel.style.height = feld.offsetHeight + "px";
+      spiegel.style.width = feld.offsetWidth + "px";
+      spiegel.scrollTop = feld.scrollTop;
+    }
+
+    function tokenisiere(text) {
+      return String(text ?? "").match(/\[Bitte ergänzen:[^\]]+\]|\s+|\S+/gi) || [];
+    }
+
+    function tokenHtml(token, art) {
+      const platzhalter = /^\[Bitte ergänzen:/i.test(token);
+      const innen = platzhalter ? `<mark class="platzhalter">${escapeHtml(token)}</mark>` : escapeHtml(token);
+      if (art === "ins") return `<ins>${innen}</ins>`;
+      if (art === "del") return `<del>${escapeHtml(token)}</del>`;
+      return innen;
+    }
+
+    function diffFassung(alt, neu) {
+      const a = tokenisiere(alt);
+      const b = tokenisiere(neu);
+      if (!a.length && !b.length) return { alt: "", neu: "" };
+      if (a.length > 450 || b.length > 450) {
+        return { alt: escapeHtml(alt), neu: platzhalterMarkup(neu) };
+      }
+      const n = a.length;
+      const m = b.length;
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      for (let i = n - 1; i >= 0; i -= 1) {
+        for (let j = m - 1; j >= 0; j -= 1) {
+          dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        }
+      }
+      let i = 0;
+      let j = 0;
+      let altHtml = "";
+      let neuHtml = "";
+      while (i < n && j < m) {
+        if (a[i] === b[j]) {
+          altHtml += tokenHtml(a[i]);
+          neuHtml += tokenHtml(b[j]);
+          i += 1;
+          j += 1;
+        } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+          altHtml += tokenHtml(a[i], "del");
+          i += 1;
+        } else {
+          neuHtml += tokenHtml(b[j], "ins");
+          j += 1;
+        }
+      }
+      while (i < n) {
+        altHtml += tokenHtml(a[i], "del");
+        i += 1;
+      }
+      while (j < m) {
+        neuHtml += tokenHtml(b[j], "ins");
+        j += 1;
+      }
+      return { alt: altHtml, neu: neuHtml };
+    }
+
     function pruefungAnzeigen(bericht) {
       const ziel = document.getElementById("pruefung");
+      verbesserteFassung = "";
       if (!bericht || !bericht.wrap_ergebnis) {
         ziel.innerHTML = "<p class=\"leis\">Noch keine Prüfung.</p>";
         return;
       }
       const text = ampelText(bericht.ampel);
-      ziel.innerHTML = `<p class="ampelzeile">${punktHtml(bericht.ampel, text, true)} <strong>${escapeHtml(text)}</strong></p>
-        <div class="prueftext">${escapeHtml(bericht.wrap_ergebnis)}</div>`;
+      const kopf = `<p class="ampelzeile">${punktHtml(bericht.ampel, text, true)} <strong>${escapeHtml(text)}</strong></p>`;
+      const hinweise = Array.isArray(bericht.hinweise) ? bericht.hinweise : [];
+      const fassung = bericht.verbesserte_fassung || "";
+      const begruendung = bericht.kurzbegruendung || "";
+      if (!begruendung && !hinweise.length && !fassung) {
+        ziel.innerHTML = `${kopf}<div class="prueftext">${escapeHtml(bericht.wrap_ergebnis)}</div>`;
+        return;
+      }
+      verbesserteFassung = fassung;
+      const liste = hinweise.length
+        ? `<ul class="hinweisliste">${hinweise.map((hinweis) => `<li>${escapeHtml(hinweis)}</li>`).join("")}</ul>`
+        : "<p class=\"leis\">Keine Hinweise.</p>";
+      let vergleich = "";
+      if (fassung) {
+        const diff = diffFassung(bericht.rohtext || "", fassung);
+        vergleich = `<h3>Verbesserte Fassung</h3>
+          <div class="vergleich">
+            <div><p class="label">Bisher</p><div class="vergleichtext">${diff.alt}</div></div>
+            <div><p class="label">Vorschlag</p><div class="vergleichtext">${diff.neu}</div></div>
+          </div>
+          <div class="aktionen">
+            <button type="button" class="sekundaer" data-aktion="uebernehmen">Übernehmen</button>
+            <button type="button" class="sekundaer" data-aktion="uebernehmen-pruefen">Übernehmen &amp; neu prüfen</button>
+          </div>`;
+      }
+      ziel.innerHTML = `${kopf}
+        ${begruendung ? `<p>${escapeHtml(begruendung)}</p>` : ""}
+        <h3>Hinweise</h3>
+        ${liste}
+        ${vergleich}`;
+    }
+
+    function fassungEinsetzen() {
+      if (!verbesserteFassung) return;
+      if (berichtStatus === "freigegeben" && !nachtragModus) {
+        nachtragModus = true;
+        formularSperren();
+      }
+      const feld = document.getElementById("rohtext");
+      feld.value = verbesserteFassung;
+      spiegelAktualisieren();
+      feld.focus();
     }
 
     function statusSetzen(bericht, hatVerlauf) {
@@ -290,6 +413,7 @@
       const text = bericht ? bericht.rohtext : "";
       document.getElementById("rohtext").value = text;
       gespeicherterText = text;
+      spiegelAktualisieren();
       statusSetzen(bericht, false);
       pruefungAnzeigen(bericht);
       formularSperren();
@@ -368,11 +492,11 @@
       const rohtext = document.getElementById("rohtext").value.trim();
       if (!rohtext) {
         setzeHinweis("Bitte einen Text eingeben.");
-        return;
+        return false;
       }
       if (berichtStatus === "freigegeben" && !nachtragModus) {
         setzeHinweis("Für eine Änderung zuerst „Bearbeiten / Nachtrag“ wählen.");
-        return;
+        return false;
       }
       const schicht = document.getElementById("schicht").value || null;
       const von = document.getElementById("nachtragVon").value.trim();
@@ -406,9 +530,18 @@
         }
         await ladeBericht();
         slotInFormular(schicht || "");
+        return true;
       } catch (fehler) {
         setzeHinweis(fehler.message);
+        return false;
       }
+    }
+
+    async function uebernehmenUndPruefen() {
+      if (!verbesserteFassung) return;
+      fassungEinsetzen();
+      const ok = await speichern();
+      if (ok) await pruefen();
     }
 
     async function pruefen() {
@@ -436,7 +569,12 @@
         setzeHinweis("Bitte den Bericht zuerst speichern.");
         return;
       }
-      if (!window.confirm("Bericht freigeben? Ein späterer Nachtrag bleibt im Verlauf sichtbar.")) return;
+      const text = document.getElementById("rohtext").value;
+      const mitPlatzhalter = /\[Bitte ergänzen:[^\]]+\]/i.test(text);
+      const frage = mitPlatzhalter
+        ? "Im Bericht stehen noch Platzhalter [Bitte ergänzen: …]. Wirklich freigeben? Ein späterer Nachtrag bleibt im Verlauf sichtbar."
+        : "Bericht freigeben? Ein späterer Nachtrag bleibt im Verlauf sichtbar.";
+      if (!window.confirm(frage)) return;
       try {
         await api("/tagesberichte/" + berichtId + "/freigeben", { method: "POST" });
         const schicht = document.getElementById("schicht").value;
@@ -486,6 +624,20 @@
     });
 
     document.getElementById("zurueck").addEventListener("click", () => zeige(herkunft));
+    document.getElementById("rohtext").addEventListener("input", spiegelAktualisieren);
+    document.getElementById("rohtext").addEventListener("scroll", spiegelAktualisieren);
+    if (window.ResizeObserver) {
+      new ResizeObserver(spiegelAktualisieren).observe(document.getElementById("rohtext"));
+    }
+    document.getElementById("pruefung").addEventListener("click", (event) => {
+      const knopf = event.target.closest("[data-aktion]");
+      if (!knopf) return;
+      if (knopf.dataset.aktion === "uebernehmen") {
+        fassungEinsetzen();
+        setzeHinweis("Verbesserte Fassung übernommen. Sie können noch ändern und dann speichern.");
+      }
+      if (knopf.dataset.aktion === "uebernehmen-pruefen") uebernehmenUndPruefen();
+    });
     document.getElementById("speichern").addEventListener("click", speichern);
     document.getElementById("pruefen").addEventListener("click", pruefen);
     document.getElementById("freigeben").addEventListener("click", freigeben);

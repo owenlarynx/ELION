@@ -199,3 +199,113 @@ def test_fehlende_pruefvorlage_setzt_keine_ampel(client, ollama, monkeypatch, tm
     assert ergebnis["ampel"] is None
     assert "Prüfvorlage wurde nicht gefunden" in ergebnis["wrap_ergebnis"]
     assert ollama["payloads"] == []
+
+
+def test_ungueltiges_json_liefert_keine_fassung(client, ollama):
+    kind = kind_anlegen(client, vorname="Minka")
+    bericht = bericht_anlegen(client, kind["id"], rohtext="Minka hat geschlafen.")
+    ollama["inhalt"] = "Das ist kein JSON"
+    ergebnis = pruefen(client, bericht["id"])
+    assert ergebnis["ampel"] is None
+    assert ergebnis["verbesserte_fassung"] is None
+    assert ergebnis["hinweise"] == []
+    assert len(ollama["payloads"]) == 1
+
+
+def test_pruefung_liefert_fassung_und_verwirft_erfundene_zitate(client, ollama):
+    kind = kind_anlegen(client, vorname="Minka")
+    bericht = bericht_anlegen(client, kind["id"], rohtext="Minka hat gefrühstückt und war ruhig.")
+    ollama["inhalt"] = modell_json(
+        "gelb",
+        hinweise=[
+            "Abwertende Zuschreibung (z.B. 'beharrt auf seiner Meinung').",
+            "Zur Stimmung fehlt eine Beobachtung.",
+            "Im Text steht 'gefrühstückt'.",
+        ],
+        begruendung="Brauchbar. Die Wendung 'völlig daneben' kommt im Text nicht vor.",
+        fassung="Minka hat gefrühstückt und wirkte ruhig. [Bitte ergänzen: Stimmung genauer?]",
+    )
+    ergebnis = pruefen(client, bericht["id"])
+    assert ergebnis["ampel"] == "gelb"
+    assert ergebnis["verbesserte_fassung"] == "Minka hat gefrühstückt und wirkte ruhig. [Bitte ergänzen: Stimmung genauer?]"
+    assert ergebnis["hinweise"] == [
+        "Zur Stimmung fehlt eine Beobachtung.",
+        "Im Text steht 'gefrühstückt'.",
+    ]
+    assert ergebnis["kurzbegruendung"] == "Brauchbar."
+    assert "beharrt auf seiner Meinung" not in ergebnis["wrap_ergebnis"]
+    assert "völlig daneben" not in ergebnis["wrap_ergebnis"]
+    assert "verbesserte_fassung" in ollama["payloads"][0]["json"]["messages"][1]["content"]
+    assert "wörtlich im Tagesbericht" in ollama["payloads"][0]["json"]["messages"][1]["content"]
+    assert len(ollama["payloads"]) == 1
+
+    geaendert = client.put(
+        f"/tagesberichte/{bericht['id']}",
+        json={"rohtext": "Minka hat gefrühstückt, geschlafen und war ruhig."},
+    )
+    assert geaendert.status_code == 200
+    assert geaendert.json()["verbesserte_fassung"] is None
+    assert geaendert.json()["hinweise"] == []
+    assert geaendert.json()["ampel"] is None
+
+
+def test_platzhalter_und_zitate():
+    from wrap import begruendung_filtern, hat_platzhalter, hinweise_filtern, parse_pruef_antwort
+
+    assert hat_platzhalter("Text [Bitte ergänzen: Medikation gegeben?] Ende")
+    assert not hat_platzhalter("Text ohne Lücke")
+    assert not hat_platzhalter(None)
+
+    rohtext = "Minka hat gefrühstückt und war ruhig."
+    behalten = hinweise_filtern(
+        [
+            "Abwertende Zuschreibung (z.B. „beharrt auf seiner Meinung“).",
+            "Schlaf ist nicht beschrieben.",
+        ],
+        rohtext,
+    )
+    assert behalten == ["Schlaf ist nicht beschrieben."]
+    assert begruendung_filtern("Der Satz 'war ruhig' steht im Text.", rohtext) == "Der Satz 'war ruhig' steht im Text."
+
+    roh = modell_json("orange", hinweise=["Schlaf fehlt."], fassung="Soll nicht übernommen werden.")
+    ohne_ampel = parse_pruef_antwort(roh, rohtext)
+    assert ohne_ampel.ampel is None
+    assert ohne_ampel.verbesserte_fassung is None
+
+
+def test_medikation_nur_zur_schichtzeit(client, ollama):
+    from wrap import medikament_passt
+
+    assert medikament_passt("morgens", "frueh")
+    assert not medikament_passt("nachmittags", "frueh")
+    assert medikament_passt("abends", "mittel")
+    assert not medikament_passt("zur Nacht", "mittel")
+    assert medikament_passt("1-0-1", "nacht")
+    assert medikament_passt("", "spaet")
+
+    kind = kind_anlegen(client, vorname="Pico", dokumentationshinweise="Medikation nur nennen, wenn sie hinterlegt ist.")
+    assert client.post("/medikamente/", json={
+        "kind_id": kind["id"], "name": "Morgen-Tropfen", "einnahmezeit": "morgens",
+    }).status_code == 200
+    assert client.post("/medikamente/", json={
+        "kind_id": kind["id"], "name": "Nacht-Pulver", "einnahmezeit": "zur Nacht",
+    }).status_code == 200
+
+    frueh = bericht_anlegen(client, kind["id"], schicht="frueh", rohtext="Pico hat gefressen.")
+    ollama["inhalt"] = modell_json("gruen", fassung="Pico hat gefressen.")
+    assert pruefen(client, frueh["id"])["ampel"] == "gruen"
+    prompt = ollama["payloads"][-1]["json"]["messages"][1]["content"]
+    assert "Morgen-Tropfen" in prompt
+    assert "Nacht-Pulver" not in prompt
+    assert len(ollama["payloads"]) == 1
+
+    ohne = kind_anlegen(client, vorname="Socke")
+    assert client.post("/medikamente/", json={
+        "kind_id": ohne["id"], "name": "Abend-Tropfen", "einnahmezeit": "abends",
+    }).status_code == 200
+    frueh_ohne = bericht_anlegen(client, ohne["id"], schicht="frueh", rohtext="Socke hat geschlafen.")
+    ollama["inhalt"] = modell_json("gruen")
+    pruefen(client, frueh_ohne["id"])
+    prompt_ohne = ollama["payloads"][-1]["json"]["messages"][1]["content"]
+    assert "Abend-Tropfen" not in prompt_ohne
+    assert "Medikation weder in den Hinweisen noch in der verbesserten Fassung erwähnen" in prompt_ohne
