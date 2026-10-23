@@ -319,16 +319,20 @@
       const text = ampelText(bericht.ampel);
       const kopf = `<p class="ampelzeile">${punktHtml(bericht.ampel, text, true)} <strong>${escapeHtml(text)}</strong></p>`;
       const hinweise = Array.isArray(bericht.hinweise) ? bericht.hinweise : [];
+      const paare = Array.isArray(bericht.umformulierungen) ? bericht.umformulierungen : [];
       const fassung = bericht.verbesserte_fassung || "";
       const begruendung = bericht.kurzbegruendung || "";
-      if (!begruendung && !hinweise.length && !fassung) {
+      if (!begruendung && !hinweise.length && !fassung && !paare.length) {
         ziel.innerHTML = `${kopf}<div class="prueftext">${escapeHtml(bericht.wrap_ergebnis)}</div>`;
         return;
       }
       verbesserteFassung = fassung;
+      const paarliste = paare.length
+        ? `<h3>Formulierungen</h3><ul class="paarliste">${paare.map((paar) => `<li><span class="zitat">„${escapeHtml(paar.zitat)}“</span> <span class="pfeil">→</span> ${escapeHtml(paar.vorschlag)}</li>`).join("")}</ul>`
+        : "";
       const liste = hinweise.length
-        ? `<ul class="hinweisliste">${hinweise.map((hinweis) => `<li>${escapeHtml(hinweis)}</li>`).join("")}</ul>`
-        : "<p class=\"leis\">Keine Hinweise.</p>";
+        ? `<h3>Pädagogische Hinweise</h3><ul class="hinweisliste">${hinweise.map((hinweis) => `<li>${escapeHtml(hinweis)}</li>`).join("")}</ul>`
+        : "";
       let vergleich = "";
       if (fassung) {
         const diff = diffFassung(bericht.rohtext || "", fassung);
@@ -344,7 +348,7 @@
       }
       ziel.innerHTML = `${kopf}
         ${begruendung ? `<p>${escapeHtml(begruendung)}</p>` : ""}
-        <h3>Hinweise</h3>
+        ${paarliste}
         ${liste}
         ${vergleich}`;
     }

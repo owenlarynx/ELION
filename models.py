@@ -131,6 +131,21 @@ class Tagesbericht(Base):
         return [str(eintrag).strip() for eintrag in werte if str(eintrag).strip()]
 
     @property
+    def umformulierungen(self):
+        werte = self._pruef_daten().get("umformulierungen")
+        if not isinstance(werte, list):
+            return []
+        paare = []
+        for eintrag in werte:
+            if not isinstance(eintrag, dict):
+                continue
+            zitat = str(eintrag.get("zitat") or "").strip()
+            vorschlag = str(eintrag.get("vorschlag") or "").strip()
+            if zitat and vorschlag:
+                paare.append({"zitat": zitat, "vorschlag": vorschlag})
+        return paare
+
+    @property
     def kurzbegruendung(self):
         text = self._pruef_daten().get("kurzbegruendung")
         if not isinstance(text, str):

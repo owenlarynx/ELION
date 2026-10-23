@@ -215,6 +215,11 @@ mark.platzhalter {
 .hinweisliste { margin: 8px 0 0; padding-left: 1.2rem; }
 .hinweisliste li { margin: 4px 0; }
 
+.paarliste { list-style: none; padding: 0; margin: 8px 0 0; }
+.paarliste li { margin: 0; padding: 8px 0; border-top: 1px solid var(--linie); }
+.zitat { font-style: italic; }
+.pfeil { color: var(--leis); margin: 0 6px; }
+
 .vergleich {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -7,7 +7,7 @@ from typing import Optional, List
 from datetime import datetime, date, time, timedelta, timezone
 from database import get_db, utc_now
 from models import Tagesbericht, BerichtVersion, Kind, Medikament, BerichtStatus, Ampel, Schicht, SCHICHT_REIHENFOLGE
-from wrap import pruefe_bericht, kind_profiltext, medikamente_text
+from wrap import anrede_anweisung, pruefe_bericht, kind_profiltext, medikamente_text
 
 router = APIRouter(prefix="/tagesberichte", tags=["berichte"])
 
@@ -25,6 +25,11 @@ class BerichtUpdate(BaseModel):
     von: Optional[str] = None
 
 
+class UmformulierungOut(BaseModel):
+    zitat: str
+    vorschlag: str
+
+
 class BerichtOut(BaseModel):
     id: int
     kind_id: int
@@ -34,6 +39,7 @@ class BerichtOut(BaseModel):
     wrap_ergebnis: Optional[str]
     verbesserte_fassung: Optional[str] = None
     hinweise: List[str] = []
+    umformulierungen: List[UmformulierungOut] = []
     kurzbegruendung: Optional[str] = None
     ampel: Optional[Ampel]
     status: BerichtStatus
@@ -352,13 +358,20 @@ async def bericht_pruefen(bericht_id: int, db: Session = Depends(get_db)):
         medikamente_text(medikamente, schicht),
         bericht.rohtext,
         schicht,
+        vorname=kind.vorname,
+        medikamente_vorhanden=bool(medikamente),
+        anrede=anrede_anweisung(kind.vorname, kind.besonderheiten, kind.dokumentationshinweise),
     )
     bericht.wrap_ergebnis = ergebnis.text
     bericht.ampel = Ampel(ergebnis.ampel) if ergebnis.ampel else None
     if ergebnis.ampel:
         bericht.verbesserte_fassung = ergebnis.verbesserte_fassung
         bericht.pruef_meta = json.dumps(
-            {"hinweise": ergebnis.hinweise, "kurzbegruendung": ergebnis.kurzbegruendung or ""},
+            {
+                "hinweise": ergebnis.hinweise,
+                "kurzbegruendung": ergebnis.kurzbegruendung or "",
+                "umformulierungen": ergebnis.umformulierungen,
+            },
             ensure_ascii=False,
         )
     else:

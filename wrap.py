@@ -31,6 +31,7 @@ class PruefErgebnis:
     hinweise: list[str] = field(default_factory=list)
     verbesserte_fassung: str | None = None
     kurzbegruendung: str | None = None
+    umformulierungen: list[dict] = field(default_factory=list)
 
 
 _SCHICHT_ZEIT = {
@@ -83,6 +84,21 @@ def medikament_passt(einnahmezeit: str | None, schicht: str | None) -> bool:
     if any(_zeitwort(text, wort) for wort in fremd):
         return False
     return True
+
+
+def anrede_anweisung(vorname: str | None, besonderheiten: str | None, dokumentationshinweise: str | None) -> str:
+    name = (vorname or "").strip() or "das Kind"
+    text = f"{besonderheiten or ''}\n{dokumentationshinweise or ''}".lower()
+    sie = re.search(r"pronomen\s*:\s*sie\b|geschlecht\s*:\s*w|\bweiblich\b|\bmädchen\b", text)
+    er = re.search(r"pronomen\s*:\s*er\b|geschlecht\s*:\s*m|\bmännlich\b|\bjunge\b", text)
+    verbot = "Niemals „der Jugendliche“, „die Jugendliche“ oder „Jugendlicher“."
+    if sie and not er:
+        return f"Das Kind heißt {name}. Verwende den Namen {name} oder das Pronomen „sie“. {verbot}"
+    if er and not sie:
+        return f"Das Kind heißt {name}. Verwende den Namen {name} oder das Pronomen „er“. {verbot}"
+    return (
+        f"Das Kind heißt {name}. Verwende ausschließlich den Namen {name}, kein erratenes er oder sie. {verbot}"
+    )
 
 
 def kind_profiltext(vorname: str, nachname: str | None, besonderheiten: str | None, dokumentationshinweise: str | None) -> str:
@@ -171,7 +187,7 @@ def ohne_ra_thor_marken(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", zusammen).strip()
 
 
-def baue_prompt(profil: str, medikation: str, rohtext: str, schicht: str | None) -> tuple[str, str]:
+def baue_prompt(profil: str, medikation: str, rohtext: str, schicht: str | None, anrede: str | None = None) -> tuple[str, str]:
     pfad = prompt_pfad()
     try:
         vorlage = pfad.read_text(encoding="utf-8")
@@ -190,6 +206,7 @@ def baue_prompt(profil: str, medikation: str, rohtext: str, schicht: str | None)
         "{profil}": profil,
         "{medikation}": medikation,
         "{rohtext}": rohtext,
+        "{anrede}": anrede or "Verwende den Vornamen aus dem Profil. Niemals „der Jugendliche“ oder „die Jugendliche“.",
     }
     for token, wert in ersatz.items():
         system = system.replace(token, wert)
@@ -280,6 +297,124 @@ def begruendung_filtern(text: str, rohtext: str) -> str:
     return " ".join(behalten).strip()
 
 
+_MED_WORT = re.compile(
+    r"medikation|medikament|\bmedis\b|tablette|tropfen|dosierung|einnahme",
+    re.IGNORECASE,
+)
+_MELDUNG = re.compile(r"jugendamt|sorgeberechtigt", re.IGNORECASE)
+_VORFALL = re.compile(
+    r"verletz|gewalt|entweich|selbstgef|fremdgef|geschlagen|suizid|notarzt",
+    re.IGNORECASE,
+)
+_JUGENDLICH = re.compile(
+    r"\b(?:der|die|dem|den|des|einem|einer|eines)\s+jugendlich\w*\b",
+    re.IGNORECASE,
+)
+_ECHO = (
+    "verwenden sachlicher",
+    "abwertender zuschreibung",
+    "vorkommnisse, die eine mitteilung",
+    "fehlende angaben wie",
+    "pruefe insbesondere",
+)
+
+
+def enthaelt_medikation(text: str | None) -> bool:
+    return bool(text and _MED_WORT.search(text))
+
+
+def _saetze(text: str) -> list[str]:
+    return [satz.strip() for satz in re.split(r"(?<=[.!?])\s+", text or "") if satz.strip()]
+
+
+def _satz_ohne_medikation(satz: str) -> str:
+    if not enthaelt_medikation(satz):
+        return satz
+    teile = re.split(r"(?<=,)\s+|\s+\bund\b\s+", satz)
+    behalten = [teil.strip(" ,") for teil in teile if teil.strip(" ,") and not enthaelt_medikation(teil)]
+    if not behalten:
+        return ""
+    text = " ".join(behalten)
+    if satz.rstrip().endswith((".", "!", "?")) and not text.endswith((".", "!", "?")):
+        text += satz.rstrip()[-1]
+    return text
+
+
+def ohne_medikationstext(text: str | None) -> str:
+    if not text:
+        return ""
+    ohne_platzhalter = PLATZHALTER.sub(
+        lambda fund: "" if enthaelt_medikation(fund.group(0)) else fund.group(0),
+        text,
+    )
+    behalten = [satz for satz in (_satz_ohne_medikation(satz) for satz in _saetze(ohne_platzhalter)) if satz]
+    return re.sub(r"[ \t]{2,}", " ", " ".join(behalten)).strip()
+
+
+def meldung_erlaubt(rohtext: str | None) -> bool:
+    quelle = rohtext or ""
+    return bool(_VORFALL.search(quelle) or _MELDUNG.search(quelle))
+
+
+def ohne_uebergriff(text: str | None, rohtext: str) -> str:
+    if not text or meldung_erlaubt(rohtext):
+        return text or ""
+    behalten = [satz for satz in _saetze(text) if not _MELDUNG.search(satz)]
+    return " ".join(behalten).strip()
+
+
+def namen_setzen(text: str | None, vorname: str | None) -> str | None:
+    if not text or not (vorname or "").strip():
+        return text
+    return _JUGENDLICH.sub(vorname.strip(), text)
+
+
+def hinweis_behaltbar(hinweis: str, rohtext: str, medikamente_vorhanden: bool) -> bool:
+    if any(teil in _norm(hinweis) for teil in _ECHO):
+        return False
+    if not medikamente_vorhanden and enthaelt_medikation(hinweis):
+        return False
+    if _MELDUNG.search(hinweis) and not meldung_erlaubt(rohtext):
+        return False
+    return True
+
+
+def _paare(wert) -> list[dict]:
+    if isinstance(wert, dict):
+        wert = [wert]
+    if not isinstance(wert, list):
+        return []
+    paare = []
+    for eintrag in wert:
+        if isinstance(eintrag, dict):
+            zitat = str(eintrag.get("zitat") or eintrag.get("original") or "").strip()
+            vorschlag = str(eintrag.get("vorschlag") or eintrag.get("besser") or "").strip()
+        elif isinstance(eintrag, str) and "→" in eintrag:
+            zitat, vorschlag = [teil.strip() for teil in eintrag.split("→", 1)]
+        else:
+            continue
+        if zitat and vorschlag:
+            paare.append({"zitat": zitat[:300], "vorschlag": vorschlag[:500]})
+    return paare
+
+
+def paare_filtern(paare: list[dict], rohtext: str, medikamente_vorhanden: bool, vorname: str | None) -> list[dict]:
+    behalten = []
+    for paar in paare:
+        zitat = paar["zitat"].strip()
+        vorschlag = (namen_setzen(paar["vorschlag"], vorname) or "").strip()
+        if len(_norm(zitat)) < 4 or not zitat_belegt(zitat, rohtext):
+            continue
+        if not medikamente_vorhanden and (enthaelt_medikation(zitat) or enthaelt_medikation(vorschlag)):
+            continue
+        if _MELDUNG.search(vorschlag) and not meldung_erlaubt(rohtext):
+            continue
+        if not vorschlag:
+            continue
+        behalten.append({"zitat": zitat, "vorschlag": vorschlag})
+    return behalten[:8]
+
+
 def _fassung(wert) -> str | None:
     if not isinstance(wert, str):
         return None
@@ -297,10 +432,13 @@ def _hinweise(wert) -> list[str]:
     return []
 
 
-def _formatiere(ampel: str, hinweise: list[str], begruendung: str) -> str:
+def _formatiere(ampel: str, hinweise: list[str], begruendung: str, paare: list[dict] | None = None) -> str:
     zeilen = [f"Ampel: {AMPEL_LABEL[ampel]}"]
     if begruendung:
         zeilen.append(begruendung)
+    if paare:
+        zeilen.append("Formulierungen:")
+        zeilen.extend(f"- „{paar['zitat']}“ → {paar['vorschlag']}" for paar in paare)
     if hinweise:
         zeilen.append("Hinweise:")
         zeilen.extend(f"- {hinweis}" for hinweis in hinweise)
@@ -311,22 +449,45 @@ def _ohne_ampel(text: str) -> PruefErgebnis:
     return PruefErgebnis(ampel=None, text=text)
 
 
-def parse_pruef_antwort(roh: str, rohtext: str = "") -> PruefErgebnis:
+def parse_pruef_antwort(
+    roh: str,
+    rohtext: str = "",
+    vorname: str | None = None,
+    medikamente_vorhanden: bool = True,
+) -> PruefErgebnis:
     daten = _json_objekt(roh)
     if not isinstance(daten, dict):
         return _ohne_ampel(
             "Die Prüfung hat kein lesbares Ergebnis geliefert. Es wurde keine Ampel gesetzt."
         )
     ampel = _ampel_aus_wert(daten.get("ampel"))
-    hinweise = hinweise_filtern(_hinweise(daten.get("hinweise")), rohtext)
+    hinweise = [
+        namen_setzen(hinweis, vorname) or hinweis
+        for hinweis in hinweise_filtern(_hinweise(daten.get("hinweise")), rohtext)
+        if hinweis_behaltbar(hinweis, rohtext, medikamente_vorhanden)
+    ][:3]
     begruendung = daten.get("kurzbegruendung") or daten.get("begruendung") or ""
     if not isinstance(begruendung, str):
         begruendung = str(begruendung)
-    begruendung = begruendung_filtern(begruendung, rohtext)
+    begruendung = namen_setzen(begruendung_filtern(begruendung, rohtext), vorname) or ""
+    if not medikamente_vorhanden:
+        begruendung = ohne_medikationstext(begruendung)
+    begruendung = ohne_uebergriff(begruendung, rohtext)
     fassung = _fassung(
         daten.get("verbesserte_fassung")
         or daten.get("verbesserteFassung")
         or daten.get("fassung")
+    )
+    if fassung:
+        if not medikamente_vorhanden:
+            fassung = ohne_medikationstext(fassung)
+        fassung = ohne_uebergriff(fassung, rohtext)
+        fassung = (namen_setzen(fassung, vorname) or "").strip() or None
+    paare = paare_filtern(
+        _paare(daten.get("umformulierungen") or daten.get("paare")),
+        rohtext,
+        medikamente_vorhanden,
+        vorname,
     )
     if ampel is None:
         teile = ["Die Prüfung enthält keine gültige Ampel. Es wurde keine Ampel gesetzt."]
@@ -338,10 +499,11 @@ def parse_pruef_antwort(roh: str, rohtext: str = "") -> PruefErgebnis:
         return _ohne_ampel("\n".join(teile))
     return PruefErgebnis(
         ampel=ampel,
-        text=_formatiere(ampel, hinweise, begruendung),
+        text=_formatiere(ampel, hinweise, begruendung, paare),
         hinweise=hinweise,
         verbesserte_fassung=fassung,
         kurzbegruendung=begruendung or None,
+        umformulierungen=paare,
     )
 
 
@@ -349,9 +511,17 @@ def _nicht_moeglich(grund: str) -> PruefErgebnis:
     return _ohne_ampel(f"Prüfung nicht möglich: {grund}. Es wurde keine Ampel gesetzt.")
 
 
-async def pruefe_bericht(profil: str, medikation: str, rohtext: str, schicht: str | None = None) -> PruefErgebnis:
+async def pruefe_bericht(
+    profil: str,
+    medikation: str,
+    rohtext: str,
+    schicht: str | None = None,
+    vorname: str | None = None,
+    medikamente_vorhanden: bool = True,
+    anrede: str | None = None,
+) -> PruefErgebnis:
     try:
-        system, prompt = baue_prompt(profil, medikation, rohtext, schicht)
+        system, prompt = baue_prompt(profil, medikation, rohtext, schicht, anrede)
     except FileNotFoundError as fehler:
         return _nicht_moeglich(f"die Prüfvorlage wurde nicht gefunden ({fehler})")
     except UnicodeDecodeError:
@@ -368,7 +538,7 @@ async def pruefe_bericht(profil: str, medikation: str, rohtext: str, schicht: st
         ],
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.2},
+        "options": {"temperature": 0.1},
     }
     try:
         async with httpx.AsyncClient(timeout=90.0) as client:
@@ -384,4 +554,9 @@ async def pruefe_bericht(profil: str, medikation: str, rohtext: str, schicht: st
     inhalt = message.get("content") if isinstance(message, dict) else None
     if not isinstance(inhalt, str):
         return _nicht_moeglich("die Antwort von Ollama war unvollständig")
-    return parse_pruef_antwort(inhalt, rohtext)
+    return parse_pruef_antwort(
+        inhalt,
+        rohtext,
+        vorname=vorname,
+        medikamente_vorhanden=medikamente_vorhanden,
+    )

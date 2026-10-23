@@ -309,3 +309,88 @@ def test_medikation_nur_zur_schichtzeit(client, ollama):
     prompt_ohne = ollama["payloads"][-1]["json"]["messages"][1]["content"]
     assert "Abend-Tropfen" not in prompt_ohne
     assert "Medikation weder in den Hinweisen noch in der verbesserten Fassung erwähnen" in prompt_ohne
+
+
+def test_ohne_gespeicherte_medikation_entfernt_server(client, ollama):
+    kind = kind_anlegen(client, vorname="Minka")
+    bericht = bericht_anlegen(
+        client,
+        kind["id"],
+        rohtext="Minka hat gefrühstückt und war danach unruhig. Keine Medis.",
+    )
+    ollama["inhalt"] = modell_json(
+        "gelb",
+        hinweise=[
+            "Medikation ist nicht dokumentiert.",
+            "Was unmittelbar vor dem Frühstück passiert ist, fehlt noch.",
+            "Vorkommnisse, die eine Mitteilung an Sorgeberechtigte oder das Jugendamt nahelegen, dokumentieren.",
+        ],
+        begruendung="Der Jugendliche ist unruhig beschrieben.",
+        fassung=(
+            "Der Jugendliche hat gefrühstückt. [Bitte ergänzen: Medikation gegeben?] "
+            "Keine Medikation wurde gegeben. Danach spielte Minka."
+        ),
+        paare=[
+            {"zitat": "Keine Medis", "vorschlag": "Keine Medikation wurde gegeben."},
+            {"zitat": "war danach unruhig", "vorschlag": "Der Jugendliche schaute während des Frühstücks mehrfach auf."},
+            {"zitat": "beharrt auf seiner Meinung", "vorschlag": "Das steht nicht im Text."},
+        ],
+    )
+    ergebnis = pruefen(client, bericht["id"])
+    assert ergebnis["verbesserte_fassung"] == "Minka hat gefrühstückt. Danach spielte Minka."
+    assert ergebnis["hinweise"] == ["Was unmittelbar vor dem Frühstück passiert ist, fehlt noch."]
+    assert ergebnis["umformulierungen"] == [{
+        "zitat": "war danach unruhig",
+        "vorschlag": "Minka schaute während des Frühstücks mehrfach auf.",
+    }]
+    assert ergebnis["kurzbegruendung"] == "Minka ist unruhig beschrieben."
+    assert "Formulierungen:" in ergebnis["wrap_ergebnis"]
+    assert "beharrt auf seiner Meinung" not in ergebnis["wrap_ergebnis"]
+    prompt = ollama["payloads"][0]["json"]["messages"][1]["content"]
+    assert "umformulierungen" in prompt
+    assert "ausschließlich den Namen Minka" in prompt
+    assert "wörtlich im Tagesbericht" in prompt
+    assert ollama["payloads"][0]["json"]["options"]["temperature"] == 0.1
+    assert ollama["payloads"][0]["json"]["format"] == "json"
+    assert len(ollama["payloads"]) == 1
+
+
+def test_medikation_und_vorfall_bleiben_erhalten(client, ollama):
+    kind = kind_anlegen(client, vorname="Pico", besonderheiten="männlich")
+    assert client.post("/medikamente/", json={
+        "kind_id": kind["id"], "name": "Morgen-Tropfen", "einnahmezeit": "morgens",
+    }).status_code == 200
+    bericht = bericht_anlegen(
+        client,
+        kind["id"],
+        schicht="frueh",
+        rohtext="Pico hat die Tropfen nicht genommen und sich dabei verletzt.",
+    )
+    ollama["inhalt"] = modell_json(
+        "rot",
+        hinweise=["Das Jugendamt sollte von der Verletzung erfahren."],
+        fassung="Pico hat die Tropfen nicht genommen. [Bitte ergänzen: Wurden sie später gegeben?]",
+        paare=[{"zitat": "nicht genommen", "vorschlag": "Pico hat die Tropfen nicht geschluckt."}],
+    )
+    ergebnis = pruefen(client, bericht["id"])
+    assert "Tropfen" in ergebnis["verbesserte_fassung"]
+    assert "[Bitte ergänzen: Wurden sie später gegeben?]" in ergebnis["verbesserte_fassung"]
+    assert ergebnis["hinweise"] == ["Das Jugendamt sollte von der Verletzung erfahren."]
+    assert ergebnis["umformulierungen"][0]["zitat"] == "nicht genommen"
+    assert "das Pronomen „er“" in ollama["payloads"][-1]["json"]["messages"][1]["content"]
+
+
+def test_jugendamt_ohne_vorfall_entfaellt():
+    from wrap import parse_pruef_antwort
+
+    roh = modell_json(
+        "gelb",
+        hinweise=["Das Jugendamt sollte informiert werden."],
+        fassung="Minka hat sich am Arm verletzt. Die Fachkraft informierte das Jugendamt.",
+    )
+    ohne = parse_pruef_antwort(roh, "Minka hat gefrühstückt.", vorname="Minka", medikamente_vorhanden=True)
+    assert ohne.hinweise == []
+    assert "Jugendamt" not in (ohne.verbesserte_fassung or "")
+    mit = parse_pruef_antwort(roh, "Minka hat sich verletzt.", vorname="Minka", medikamente_vorhanden=True)
+    assert mit.hinweise == ["Das Jugendamt sollte informiert werden."]
+    assert "Jugendamt" in mit.verbesserte_fassung
