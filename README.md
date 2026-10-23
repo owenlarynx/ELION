@@ -20,7 +20,7 @@ Dann http://localhost:8000 öffnen.
 
 Die Oberfläche hat drei Arbeitsansichten: die Tagesübersicht, den Bericht eines Kindes und das Wochenraster. Kinder, Medikamente und Kontakte liegen unter Verwaltung.
 
-Die Prüfung eines Berichts läuft über Ollama in einem Aufruf und erwartet eine JSON-Antwort mit Ampel, Umformulierungen (Zitat und Vorschlag), kurzen pädagogischen Hinweisen und einer verbesserten Fassung. Fehlende Angaben stehen darin als Platzhalter `[Bitte ergänzen: …]`. Zitate, die im Text nicht vorkommen, werden verworfen. Ist keine Medikation hinterlegt, entfallen Medikationshinweise, Medikationsplatzhalter und Sätze wie „Keine Medikation wurde gegeben“. Wenn Ollama nicht erreichbar ist, bleibt die Ampel leer; es wird kein Grün gesetzt. Installation unter Windows und Linux, Docker Compose und die Prüfvorlage stehen in [docs/OLLAMA.md](docs/OLLAMA.md).
+Die Prüfung eines Berichts läuft über Ollama in einem Aufruf und erwartet eine JSON-Antwort mit Ampel, Umformulierungen (Zitat und Vorschlag), kurzen pädagogischen Hinweisen und einer verbesserten Fassung. Fehlende Angaben stehen darin als Platzhalter `[Bitte ergänzen: …]`. Zitate, die im Text nicht vorkommen, werden verworfen. Sätze mit neuen Handlungen, Orten oder Gegenständen ebenfalls. Fehlt danach ein Fakt aus dem Original, bleibt eine rechtschreibkorrigierte Fassung des Originals. Ist keine Medikation hinterlegt, entfallen Medikationshinweise, Medikationsplatzhalter und Sätze wie „Keine Medikation wurde gegeben“. Wenn Ollama nicht erreichbar ist, bleibt die Ampel leer; es wird kein Grün gesetzt. Installation unter Windows und Linux, Docker Compose und die Prüfvorlage stehen in [docs/OLLAMA.md](docs/OLLAMA.md).
 
 ## Konfiguration
 

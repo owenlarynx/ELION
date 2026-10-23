@@ -10,7 +10,7 @@ from tests.hilfen import bericht_anlegen, kind_anlegen, modell_json, pruefen
 def test_pruefung_setzt_ampel_aus_json(client, ollama, ampel):
     kind = kind_anlegen(client, vorname="Minka")
     bericht = bericht_anlegen(client, kind["id"], rohtext="Minka hat geschlafen und gefressen.")
-    ollama["inhalt"] = modell_json(ampel, hinweise=["Essen ist genannt."], begruendung="Der Text ist brauchbar.")
+    ollama["inhalt"] = modell_json(ampel, hinweise=["geschlafen ist dokumentiert."], begruendung="Der Text ist brauchbar.")
     ergebnis = pruefen(client, bericht["id"])
     assert ergebnis["ampel"] == ampel
     assert "Hinweise:" in ergebnis["wrap_ergebnis"]
@@ -322,6 +322,7 @@ def test_ohne_gespeicherte_medikation_entfernt_server(client, ollama):
         "gelb",
         hinweise=[
             "Medikation ist nicht dokumentiert.",
+            "Die Unruhe ist nur knapp beschrieben.",
             "Was unmittelbar vor dem Frühstück passiert ist, fehlt noch.",
             "Vorkommnisse, die eine Mitteilung an Sorgeberechtigte oder das Jugendamt nahelegen, dokumentieren.",
         ],
@@ -333,15 +334,16 @@ def test_ohne_gespeicherte_medikation_entfernt_server(client, ollama):
         paare=[
             {"zitat": "Keine Medis", "vorschlag": "Keine Medikation wurde gegeben."},
             {"zitat": "war danach unruhig", "vorschlag": "Der Jugendliche schaute während des Frühstücks mehrfach auf."},
+            {"zitat": "war danach unruhig", "vorschlag": "Minka war danach unruhig."},
             {"zitat": "beharrt auf seiner Meinung", "vorschlag": "Das steht nicht im Text."},
         ],
     )
     ergebnis = pruefen(client, bericht["id"])
-    assert ergebnis["verbesserte_fassung"] == "Minka hat gefrühstückt. Danach spielte Minka."
-    assert ergebnis["hinweise"] == ["Was unmittelbar vor dem Frühstück passiert ist, fehlt noch."]
+    assert ergebnis["verbesserte_fassung"] == "Minka hat gefrühstückt und war danach unruhig."
+    assert ergebnis["hinweise"] == ["Die Unruhe ist nur knapp beschrieben."]
     assert ergebnis["umformulierungen"] == [{
         "zitat": "war danach unruhig",
-        "vorschlag": "Minka schaute während des Frühstücks mehrfach auf.",
+        "vorschlag": "Minka war danach unruhig.",
     }]
     assert ergebnis["kurzbegruendung"] == "Minka ist unruhig beschrieben."
     assert "Formulierungen:" in ergebnis["wrap_ergebnis"]
@@ -350,7 +352,8 @@ def test_ohne_gespeicherte_medikation_entfernt_server(client, ollama):
     assert "umformulierungen" in prompt
     assert "ausschließlich den Namen Minka" in prompt
     assert "wörtlich im Tagesbericht" in prompt
-    assert ollama["payloads"][0]["json"]["options"]["temperature"] == 0.1
+    assert ollama["payloads"][0]["json"]["options"]["temperature"] == 0
+    assert ollama["payloads"][0]["json"]["options"]["top_p"] == 0.1
     assert ollama["payloads"][0]["json"]["format"] == "json"
     assert len(ollama["payloads"]) == 1
 
@@ -369,7 +372,7 @@ def test_medikation_und_vorfall_bleiben_erhalten(client, ollama):
     ollama["inhalt"] = modell_json(
         "rot",
         hinweise=["Das Jugendamt sollte von der Verletzung erfahren."],
-        fassung="Pico hat die Tropfen nicht genommen. [Bitte ergänzen: Wurden sie später gegeben?]",
+        fassung="Pico hat die Tropfen nicht genommen und sich dabei verletzt. [Bitte ergänzen: Wurden sie später gegeben?]",
         paare=[{"zitat": "nicht genommen", "vorschlag": "Pico hat die Tropfen nicht geschluckt."}],
     )
     ergebnis = pruefen(client, bericht["id"])
@@ -394,3 +397,56 @@ def test_jugendamt_ohne_vorfall_entfaellt():
     mit = parse_pruef_antwort(roh, "Minka hat sich verletzt.", vorname="Minka", medikamente_vorhanden=True)
     assert mit.hinweise == ["Das Jugendamt sollte informiert werden."]
     assert "Jugendamt" in mit.verbesserte_fassung
+
+
+def test_erfundener_satz_entfaellt_wenn_die_fakten_bleiben():
+    from wrap import parse_pruef_antwort
+
+    roh = modell_json(
+        "gelb",
+        fassung="Minka hat gefrühstückt und war ruhig. Danach spielte Minka im Zimmer.",
+    )
+    ergebnis = parse_pruef_antwort(
+        roh,
+        "Minka hat gefrühstückt und war ruhig.",
+        vorname="Minka",
+        medikamente_vorhanden=True,
+    )
+    assert ergebnis.verbesserte_fassung == "Minka hat gefrühstückt und war ruhig."
+
+
+def test_erfundene_fakten_fallen_auf_den_originaltext_zurueck(client, ollama):
+    kind = kind_anlegen(client, vorname="Max")
+    original = (
+        "Peter kam gut aus dem Bett, wollte morgens viel Kontakt zum Betreuer. "
+        "Wurde gut aufgenfagen, was sein bedürfnis war konnte jedoch nicht herausgefunden werden. "
+        "Kam dann gut zum Frühstück und konnte sich gut auf sein Essen konzentreiren und nicht porvouzieren lassen. "
+        "Kam dan gut los mir seinem fahrrad zum hort"
+    )
+    bericht = bericht_anlegen(client, kind["id"], rohtext=original)
+    ollama["inhalt"] = modell_json(
+        "gelb",
+        hinweise=["Was ist unmittelbar vor dem Frühstück passiert, und wobei konnte Max wieder essen?"],
+        begruendung="Der Tagesbericht enthält Lücken und unscharfe Formulierungen.",
+        fassung=(
+            "Max kam gut aus dem Bett. Max wollte morgens viel Kontakt zur Fachkraft. "
+            "Die Fachkraft stellte fest, dass Max' Bedürfnis nicht klar erkennbar war. "
+            "Max kam dann gut zum Frühstück und aß sitzend weiter. "
+            "Die Fachkraft stellte das Brot noch einmal hin. Danach aß Max weiter. "
+            "Max ging dann mit seinem Fahrrad zum Hort. "
+            "Max kam danach in die Mittagsruhe und spielte im Zimmer."
+        ),
+        paare=[
+            {"zitat": "Peter kam gut aus dem Bett", "vorschlag": "Max kam gut aus dem Bett"},
+            {"zitat": "stellte das Brot", "vorschlag": "Die Fachkraft stellte das Brot noch einmal hin."},
+        ],
+    )
+    ergebnis = pruefen(client, bericht["id"])
+    text = ergebnis["verbesserte_fassung"]
+    for wort in ("Brot", "Mittagsruhe", "Zimmer", "sitzend"):
+        assert wort.lower() not in text.lower()
+    for wort in ("aufgefangen", "konzentrieren", "provozieren", "Fahrrad", "Hort"):
+        assert wort in text
+    assert ergebnis["hinweise"] == []
+    assert ergebnis["umformulierungen"] == [{"zitat": "Peter kam gut aus dem Bett", "vorschlag": "Max kam gut aus dem Bett"}]
+    assert "Keine neue Handlung" in ollama["payloads"][0]["json"]["messages"][1]["content"]

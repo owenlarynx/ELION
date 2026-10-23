@@ -376,7 +376,175 @@ def hinweis_behaltbar(hinweis: str, rohtext: str, medikamente_vorhanden: bool) -
         return False
     if _MELDUNG.search(hinweis) and not meldung_erlaubt(rohtext):
         return False
-    return True
+    if _MELDUNG.search(hinweis) and meldung_erlaubt(rohtext):
+        return True
+    return hinweis_geerdet(hinweis, rohtext)
+
+
+_STOPP = {
+    "aber", "als", "auch", "auf", "aus", "bei", "bin", "bis", "bist", "da", "dabei", "dadurch",
+    "dann", "danach", "dass", "dem", "den", "der", "des", "die", "dies", "diese", "dieser",
+    "dieses", "doch", "dort", "du", "durch", "ein", "eine", "einem", "einen", "einer", "er",
+    "es", "fuer", "ganz", "gut", "haben", "hat", "hatte", "hier", "hin", "ich", "ihm", "ihn",
+    "ihr", "ihre", "ihrem", "ihren", "ihrer", "im", "in", "ist", "ja", "kann", "kein", "keine",
+    "konnte", "lassen", "man", "mehr", "mit", "mir", "muss", "musste", "nach", "nicht", "noch",
+    "nur", "oder", "ohne", "schon", "sehr", "sein", "seine", "seinem", "seinen", "seiner",
+    "sich", "sie", "sind", "so", "soll", "sollte", "ueber", "um", "und", "vom", "von", "vor",
+    "viel", "war", "waren", "was", "weil", "wenn", "wer", "wie", "wieder", "wird", "wir",
+    "wobei", "wurde", "wurden", "zu", "zum", "zur", "zwischen",
+}
+_KURZINHALT = {"ass", "fiel", "gab", "ging", "kam", "lag", "rief", "sah"}
+_META = {
+    "angabe", "angaben", "beobachtbar", "beobachtung", "beobachtungen", "benannt",
+    "beschreibt", "beschreibung", "beschrieben", "dokumentation", "dokumentiert",
+    "ergaenzen", "ergaenzt", "fehlt", "fehlen", "fehlend", "fehlende", "formulierung",
+    "formulierungen", "genauer", "hinweis", "hinweise", "knapp", "luecke", "luecken",
+    "notieren", "notiert", "rechtschreibung", "grammatik", "satz", "saetze", "sprache",
+    "steht", "stehen", "stimmung", "text", "texte", "wendung", "wendungen",
+}
+_LEXIKON_FORM = (
+    "aufgefangen", "Bedürfnis", "Betreuer", "Bett", "Essen", "Fahrrad", "Frühstück",
+    "gefrühstückt", "geschlafen", "herausgefunden", "Hort", "Kontakt", "konzentrieren",
+    "genommen", "provozieren", "ruhig", "Tropfen", "unruhig", "verletzt",
+)
+_LEXIKON = {_norm(wort): wort for wort in _LEXIKON_FORM}
+
+
+def _damerau(a: str, b: str) -> int:
+    la, lb = len(a), len(b)
+    d = [[0] * (lb + 1) for _ in range(la + 1)]
+    for i in range(la + 1):
+        d[i][0] = i
+    for j in range(lb + 1):
+        d[0][j] = j
+    for i in range(1, la + 1):
+        for j in range(1, lb + 1):
+            kosten = 0 if a[i - 1] == b[j - 1] else 1
+            d[i][j] = min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + kosten)
+            if i > 1 and j > 1 and a[i - 1] == b[j - 2] and a[i - 2] == b[j - 1]:
+                d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)
+    return d[la][lb]
+
+
+def _stamm(wort: str) -> str:
+    w = _norm(wort)
+    if w.startswith("ge") and len(w) > 6:
+        w = w[2:]
+    for endung in ("ierungen", "ierung", "ieren", "iert", "ungen", "ende", "end", "ung", "ern", "en", "em", "er", "es", "et", "te", "st", "t", "e"):
+        if len(w) - len(endung) >= 4 and w.endswith(endung):
+            return w[: -len(endung)]
+    return w
+
+
+def _tokens(text: str) -> list[str]:
+    rein = PLATZHALTER.sub(" ", text or "")
+    return re.findall(r"[A-Za-zÄÖÜäöüß]+", rein)
+
+
+def _inhalt(text: str, vorname: str | None = None) -> list[str]:
+    name = _norm(vorname or "")
+    woerter = []
+    for token in _tokens(text):
+        normal = _norm(token)
+        if not normal or normal == name or normal in _STOPP or normal in _META:
+            continue
+        if len(normal) >= 4 or normal in _KURZINHALT:
+            woerter.append(token)
+    return woerter
+
+
+def wort_belegt(wort: str, quelle: str) -> bool:
+    ziel = _norm(wort)
+    if not ziel:
+        return False
+    stamm = _stamm(wort)
+    for token in _tokens(quelle):
+        normal = _norm(token)
+        if not normal:
+            continue
+        if ziel == normal or stamm == _stamm(token):
+            return True
+        kuerzer = min(len(ziel), len(normal))
+        gemeinsam = 0
+        while gemeinsam < kuerzer and ziel[gemeinsam] == normal[gemeinsam]:
+            gemeinsam += 1
+        if gemeinsam >= 5:
+            return True
+        if len(ziel) >= 6 and len(normal) >= 6 and _damerau(ziel, normal) <= 2:
+            return True
+    return False
+
+
+def satz_hat_neuen_inhalt(satz: str, quelle: str, vorname: str | None = None) -> bool:
+    woerter = _inhalt(satz, vorname)
+    if not woerter:
+        return False
+    neu = [wort for wort in woerter if not wort_belegt(wort, quelle)]
+    alt = [wort for wort in woerter if wort_belegt(wort, quelle)]
+    return len(neu) >= 2 or (len(neu) >= 1 and not alt)
+
+
+def fakten_gedeckt(text: str, quelle: str, vorname: str | None = None) -> bool:
+    return all(wort_belegt(wort, text) for wort in _inhalt(quelle, vorname))
+
+
+def hinweis_geerdet(hinweis: str, rohtext: str) -> bool:
+    if re.search(r"\bwieder\b", hinweis or "", flags=re.IGNORECASE) and not re.search(
+        r"\bwieder\b", rohtext or "", flags=re.IGNORECASE
+    ):
+        return False
+    return all(wort_belegt(wort, rohtext) for wort in _inhalt(hinweis))
+
+
+def _lexikon_form(token: str) -> str | None:
+    normal = _norm(token)
+    if normal in _LEXIKON:
+        return _LEXIKON[normal]
+    if len(normal) < 6:
+        return None
+    treffer = [form for key, form in _LEXIKON.items() if abs(len(key) - len(normal)) <= 2 and _damerau(normal, key) <= 2]
+    if len(treffer) == 1:
+        return treffer[0]
+    return None
+
+
+def korrigiere_minimal(text: str | None) -> str:
+    if not text:
+        return ""
+
+    def ersetzen(fund: re.Match) -> str:
+        form = _lexikon_form(fund.group(0))
+        return form if form else fund.group(0)
+
+    korrigiert = re.sub(r"[A-Za-zÄÖÜäöüß]+", ersetzen, text)
+    korrigiert = re.sub(
+        r"\bmir\b(?=\s+(?:seinem|seiner|seinen|ihrem|ihrer|ihren|einem)\b)",
+        "mit",
+        korrigiert,
+        flags=re.IGNORECASE,
+    )
+    korrigiert = re.sub(r"\bdan\b", "dann", korrigiert, flags=re.IGNORECASE)
+    return re.sub(r"[ \t]{2,}", " ", korrigiert).strip()
+
+
+def fassung_erden(fassung: str | None, rohtext: str, vorname: str | None, medikamente_vorhanden: bool) -> str | None:
+    quelle = rohtext or ""
+    if not medikamente_vorhanden:
+        quelle = ohne_medikationstext(quelle)
+    if not (fassung or "").strip():
+        return None
+    behalten = []
+    for satz in _saetze(fassung):
+        if meldung_erlaubt(rohtext) and _MELDUNG.search(satz):
+            behalten.append(satz)
+            continue
+        if satz_hat_neuen_inhalt(satz, quelle, vorname):
+            continue
+        behalten.append(satz)
+    text = " ".join(behalten).strip()
+    if not text or not fakten_gedeckt(text, quelle, vorname):
+        text = korrigiere_minimal(quelle)
+    return text.strip() or None
 
 
 def _paare(wert) -> list[dict]:
@@ -408,6 +576,8 @@ def paare_filtern(paare: list[dict], rohtext: str, medikamente_vorhanden: bool, 
         if not medikamente_vorhanden and (enthaelt_medikation(zitat) or enthaelt_medikation(vorschlag)):
             continue
         if _MELDUNG.search(vorschlag) and not meldung_erlaubt(rohtext):
+            continue
+        if satz_hat_neuen_inhalt(vorschlag, rohtext, vorname):
             continue
         if not vorschlag:
             continue
@@ -483,6 +653,7 @@ def parse_pruef_antwort(
             fassung = ohne_medikationstext(fassung)
         fassung = ohne_uebergriff(fassung, rohtext)
         fassung = (namen_setzen(fassung, vorname) or "").strip() or None
+        fassung = fassung_erden(fassung, rohtext, vorname, medikamente_vorhanden)
     paare = paare_filtern(
         _paare(daten.get("umformulierungen") or daten.get("paare")),
         rohtext,
@@ -538,7 +709,7 @@ async def pruefe_bericht(
         ],
         "stream": False,
         "format": "json",
-        "options": {"temperature": 0.1},
+        "options": {"temperature": 0, "top_p": 0.1},
     }
     try:
         async with httpx.AsyncClient(timeout=90.0) as client:
