@@ -160,7 +160,84 @@ input, select, textarea {
 }
 
 textarea { min-height: 88px; resize: vertical; }
-#rohtext { min-height: 220px; }
+
+.editor-rahmen {
+  position: relative;
+  margin-top: 4px;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  background: white;
+}
+
+.editor-rahmen textarea,
+.editor-spiegel {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  font: inherit;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#rohtext {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+  caret-color: var(--tinte);
+  resize: vertical;
+}
+
+#rohtext::placeholder { color: var(--leis); }
+#rohtext::selection { background: rgba(30, 79, 90, 0.18); color: transparent; }
+
+.editor-spiegel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--tinte);
+}
+
+mark.platzhalter {
+  background: #f6e2a8;
+  color: #6a4b00;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.hinweisliste { margin: 8px 0 0; padding-left: 1.2rem; }
+.hinweisliste li { margin: 4px 0; }
+
+.paarliste { list-style: none; padding: 0; margin: 8px 0 0; }
+.paarliste li { margin: 0; padding: 8px 0; border-top: 1px solid var(--linie); }
+.zitat { font-style: italic; }
+.pfeil { color: var(--leis); margin: 0 6px; }
+
+.vergleich {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.vergleichtext {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: white;
+  border: 1px solid var(--linie);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 4.5rem;
+}
+
+.vergleichtext del { background: #f8d6d3; text-decoration: none; }
+.vergleichtext ins { background: #d9efdf; text-decoration: none; }
 
 .aktionen, .wochenleiste, .zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
@@ -191,7 +268,34 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .ampelzeile { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 
-.prueftext, .profiltext { white-space: pre-wrap; margin: 0; }
+.prueftext, .profiltext, .alttext { white-space: pre-wrap; margin: 0; }
+
+.verlauf { list-style: none; padding: 0; margin: 0; }
+.verlauf li { border-top: 1px solid var(--linie); padding: 10px 0; }
+.alttext { margin-top: 4px; }
+
+.tageshinweis {
+  display: block;
+  color: var(--leis);
+  font-size: 0.75rem;
+  font-weight: 500;
+  max-width: 8rem;
+  line-height: 1.3;
+}
+
+.schichtleiste { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+
+button.schichtwahl, button.tagknopf {
+  background: white;
+  color: inherit;
+  border: 1px solid var(--linie);
+  text-align: left;
+}
+
+button.schichtwahl { display: flex; align-items: center; gap: 8px; width: 100%; }
+button.schichtwahl.aktiv { border-color: var(--akzent); background: var(--akzent-hell); }
+button.schichtwahl.voll { grid-column: 1 / -1; }
+button.tagknopf { border: 0; background: transparent; width: 100%; padding: 2px; cursor: pointer; }
 
 .label { display: block; color: var(--leis); font-size: 0.82rem; font-weight: 650; }
 
@@ -229,6 +333,7 @@ button.link {
 }
 
 .zelle { display: grid; justify-items: center; gap: 4px; }
+.zelle .kuerzel { margin-left: 0; }
 
 .liste { list-style: none; padding: 0; margin: 12px 0 0; }
 
@@ -250,6 +355,6 @@ button.link {
 :focus-visible { outline: 2px solid var(--akzent); outline-offset: 2px; }
 
 @media (max-width: 800px) {
-  .bericht-layout { grid-template-columns: 1fr; }
+  .bericht-layout, .vergleich { grid-template-columns: 1fr; }
   header { align-items: flex-start; }
 }

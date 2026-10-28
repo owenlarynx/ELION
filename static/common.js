@@ -81,10 +81,21 @@ function punktHtml(ampel, titel, vorhanden) {
   return `<span class="punkt ${klasse}" title="${sicher}" aria-label="${sicher}"></span>`;
 }
 
+const SCHICHTEN = [
+  ["frueh", "Frühdienst", "Früh"],
+  ["mittel", "Mitteldienst", "Mittel"],
+  ["spaet", "Spätdienst", "Spät"],
+  ["nacht", "Nachtdienst", "Nacht"],
+];
+
 function schichtName(wert) {
-  if (wert === "frueh") return "Frühdienst";
-  if (wert === "spaet") return "Spätdienst";
-  return "ohne Schicht";
+  const fund = SCHICHTEN.find((eintrag) => eintrag[0] === wert);
+  return fund ? fund[1] : "ohne Schicht";
+}
+
+function schichtKurz(wert) {
+  const fund = SCHICHTEN.find((eintrag) => eintrag[0] === wert);
+  return fund ? fund[2] : "Tag";
 }
 
 function statusText(status) {
