@@ -19,12 +19,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import kinder, berichte, medikamente, kontakte
+from routes import berichte, kinder, kontakte, medikamente, seed
 
 app.include_router(kinder.router)
 app.include_router(berichte.router)
 app.include_router(medikamente.router)
 app.include_router(kontakte.router)
+app.include_router(seed.router)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

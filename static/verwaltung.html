@@ -4,358 +4,122 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ELION – Verwaltung</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
 </head>
-<body>
-  <header>
-    <div>
-      <p class="marke">ELION</p>
-      <p class="untertitel">Verwaltung · Pilot mit Platzhalterdaten</p>
-    </div>
-    <nav>
+<body class="bereich-verwaltung">
+  <header class="kopf">
+    <a class="marke" href="/#heute">
+      <span class="marke-zeichen" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span class="marke-text">
+        <span class="marke-name">ELION</span>
+        <span class="marke-unter">Tagesdoku vor Ort</span>
+      </span>
+    </a>
+    <nav class="hauptnav" aria-label="Tagesarbeit">
       <a href="/#heute">Heute</a>
       <a href="/#woche">Woche</a>
-      <a href="/verwaltung.html" class="aktiv">Verwaltung</a>
     </nav>
+    <a class="nav-verwaltung aktiv" href="/verwaltung.html" aria-current="page">Verwaltung</a>
   </header>
   <main>
-    <h1>Verwaltung</h1>
-    <p class="hilfe">Kinder, Medikamente und Kontakte. Im Pilot nur Platzhalter verwenden, keine echten Personendaten.</p>
+    <noscript><p class="zustand">ELION braucht JavaScript in diesem Browser.</p></noscript>
+    <div class="seitenkopf">
+      <div>
+        <p class="kicker">Verwaltung</p>
+        <h1>Stammdaten</h1>
+        <p class="hilfe">Kinder, optionale Medikation und Kontakte. Nur Platzhalter eintragen, keine echten Personendaten. Die Tagesberichte bleiben unter Heute und Woche.</p>
+      </div>
+      <a class="button sekundaer" href="/#heute">Zur Tagesarbeit</a>
+    </div>
     <p class="hinweis" id="meldung" role="status"></p>
 
-    <section class="abschnitt">
-      <h2>Kinder</h2>
-      <form class="formular" id="kindForm">
-        <label>Vorname <input name="vorname" required></label>
-        <label>Nachname <input name="nachname"></label>
-        <label>Rechtsgrundlage <input name="paragraph" placeholder="z. B. § 34 SGB VIII"></label>
-        <label>Besonderheiten <textarea name="besonderheiten"></textarea></label>
-        <label>Dokumentationshinweise <textarea name="dokumentationshinweise"></textarea></label>
-        <div class="aktionen">
-          <button type="submit" id="kindSpeichern">Anlegen</button>
-          <button type="button" class="sekundaer" id="kindAbbrechen" hidden>Abbrechen</button>
-        </div>
-      </form>
-      <ul class="liste" id="kinderListe"></ul>
+    <section class="pilotkarte">
+      <div>
+        <h2>Pilotdaten</h2>
+        <p class="hilfe">Legt die Kürzel AK, MS, LS, BH, AB und EST an, falls sie fehlen, dazu Beispielberichte mit Ampel. Vorhandene Berichte bleiben unverändert.</p>
+      </div>
+      <button type="button" id="pilotLaden">Pilotdaten laden</button>
     </section>
 
-    <section class="abschnitt">
-      <h2>Medikamente und Kontakte</h2>
-      <label>Kind
-        <select id="bezugsKind"></select>
-      </label>
+    <div class="verwaltung-layout">
+      <section class="karte">
+        <h2 id="kindFormTitel">Kind anlegen</h2>
+        <form class="formular" id="kindForm">
+          <div class="felder">
+            <label>Vorname <input name="vorname" required autocomplete="off"></label>
+            <label>Nachname <input name="nachname" autocomplete="off"></label>
+            <label class="breit">Rechtsgrundlage <input name="paragraph" placeholder="z. B. § 34 SGB VIII"></label>
+            <label class="breit">Besonderheiten <textarea name="besonderheiten"></textarea></label>
+            <label class="breit">Dokumentationshinweise <textarea name="dokumentationshinweise"></textarea></label>
+          </div>
+          <div class="aktionen">
+            <button type="submit" id="kindSpeichern">Anlegen</button>
+            <button type="button" class="sekundaer" id="kindAbbrechen" hidden>Abbrechen</button>
+          </div>
+        </form>
+        <ul class="liste" id="kinderListe"></ul>
+      </section>
 
-      <form class="formular" id="medForm">
-        <h3>Medikament</h3>
-        <label>Name <input name="name" required></label>
-        <label>Dosierung <input name="dosierung"></label>
-        <label>Einnahmezeit <input name="einnahmezeit" placeholder="z. B. morgens, abends"></label>
-        <label>Hinweis <textarea name="hinweis"></textarea></label>
-        <div class="aktionen">
-          <button type="submit" id="medSpeichern">Hinzufügen</button>
-          <button type="button" class="sekundaer" id="medAbbrechen" hidden>Abbrechen</button>
-        </div>
-      </form>
-      <ul class="liste" id="medListe"></ul>
-
-      <form class="formular" id="kontaktForm">
-        <h3>Kontakt</h3>
-        <label>Art
-          <select name="typ">
-            <option value="eltern">Eltern</option>
-            <option value="asd">Jugendamt (ASD)</option>
-            <option value="vormund">Vormund</option>
-            <option value="sonstige">Sonstige</option>
-          </select>
+      <section class="karte" id="bezugKarte">
+        <h2>Medikation und Kontakte</h2>
+        <label>Kind
+          <select id="bezugsKind"></select>
         </label>
-        <label>Name <input name="name" required></label>
-        <label>Telefon <input name="telefon"></label>
-        <label>E-Mail <input name="email" type="email"></label>
-        <label>Hinweis <textarea name="hinweis"></textarea></label>
-        <div class="aktionen">
-          <button type="submit" id="kontaktSpeichern">Hinzufügen</button>
-          <button type="button" class="sekundaer" id="kontaktAbbrechen" hidden>Abbrechen</button>
-        </div>
-      </form>
-      <ul class="liste" id="kontaktListe"></ul>
-    </section>
+        <p class="hilfe">Medikation nur hinterlegen, wenn sie für dieses Kind gilt. Ohne Eintrag spricht die Prüfung Medikamente nicht an.</p>
+
+        <form class="formular" id="medForm">
+          <h3>Medikation</h3>
+          <div class="felder">
+            <label>Name <input name="name" required></label>
+            <label>Dosierung <input name="dosierung"></label>
+            <label>Einnahmezeit <input name="einnahmezeit" placeholder="z. B. morgens, abends"></label>
+            <label class="breit">Hinweis <textarea name="hinweis"></textarea></label>
+          </div>
+          <div class="aktionen">
+            <button type="submit" id="medSpeichern">Hinzufügen</button>
+            <button type="button" class="sekundaer" id="medAbbrechen" hidden>Abbrechen</button>
+          </div>
+        </form>
+        <ul class="liste" id="medListe"></ul>
+
+        <form class="formular" id="kontaktForm">
+          <h3>Kontakt</h3>
+          <div class="felder">
+            <label>Art
+              <select name="typ">
+                <option value="eltern">Eltern</option>
+                <option value="asd">Jugendamt (ASD)</option>
+                <option value="vormund">Vormund</option>
+                <option value="sonstige">Sonstige</option>
+              </select>
+            </label>
+            <label>Name <input name="name" required></label>
+            <label>Telefon <input name="telefon"></label>
+            <label>E-Mail <input name="email" type="email"></label>
+            <label class="breit">Hinweis <textarea name="hinweis"></textarea></label>
+          </div>
+          <div class="aktionen">
+            <button type="submit" id="kontaktSpeichern">Hinzufügen</button>
+            <button type="button" class="sekundaer" id="kontaktAbbrechen" hidden>Abbrechen</button>
+          </div>
+        </form>
+        <ul class="liste" id="kontaktListe"></ul>
+      </section>
+    </div>
   </main>
+
+  <dialog id="dialog" aria-labelledby="dialogText">
+    <form method="dialog">
+      <p id="dialogText"></p>
+      <div class="aktionen">
+        <button type="submit" id="dialogOk" value="ok">Weiter</button>
+        <button type="submit" class="sekundaer" id="dialogAbbrechen" value="cancel">Abbrechen</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="/common.js"></script>
-  <script>
-    let kinder = [];
-    let kindEditId = null;
-    let medEditId = null;
-    let kontaktEditId = null;
-
-    const meldung = document.getElementById("meldung");
-    function hinweis(text) { meldung.textContent = text || ""; }
-
-    function formularDaten(form) {
-      const daten = {};
-      for (const element of form.elements) {
-        if (!element.name) continue;
-        const wert = element.value.trim();
-        daten[element.name] = wert || null;
-      }
-      return daten;
-    }
-
-    function formFuellen(form, daten) {
-      for (const element of form.elements) {
-        if (!element.name) continue;
-        element.value = daten[element.name] || "";
-      }
-    }
-
-    function formLeeren(form) {
-      form.reset();
-    }
-
-    async function ladeKinder() {
-      kinder = await api("/kinder/?inkl_inaktiv=true");
-      const liste = document.getElementById("kinderListe");
-      if (!kinder.length) {
-        liste.innerHTML = "<li>Noch keine Kinder.</li>";
-      } else {
-        liste.innerHTML = kinder.map((kind) => {
-          const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
-          const aktion = kind.aktiv
-            ? `<button type="button" class="leise" data-aktion="aus" data-id="${kind.id}">Deaktivieren</button>`
-            : `<button type="button" class="sekundaer" data-aktion="an" data-id="${kind.id}">Aktivieren</button>`;
-          return `<li class="${kind.aktiv ? "" : "inaktiv"}">
-            <div><strong>${escapeHtml(name)}</strong>${kind.aktiv ? "" : " · inaktiv"}
-              ${kind.paragraph ? `<br><span class="leis">${escapeHtml(kind.paragraph)}</span>` : ""}
-              ${kind.besonderheiten ? `<br><span class="leis">${escapeHtml(kind.besonderheiten)}</span>` : ""}
-            </div>
-            <div class="aktionen">
-              <button type="button" class="sekundaer" data-aktion="bearbeiten" data-id="${kind.id}">Bearbeiten</button>
-              ${aktion}
-            </div>
-          </li>`;
-        }).join("");
-      }
-      const auswahl = document.getElementById("bezugsKind");
-      const bisher = auswahl.value;
-      const aktive = kinder.filter((kind) => kind.aktiv);
-      auswahl.innerHTML = aktive.map((kind) => `<option value="${kind.id}">${escapeHtml(`${kind.vorname} ${kind.nachname || ""}`.trim())}</option>`).join("");
-      if (bisher && aktive.some((kind) => String(kind.id) === bisher)) auswahl.value = bisher;
-      await ladeBezug();
-    }
-
-    async function ladeBezug() {
-      const kindId = document.getElementById("bezugsKind").value;
-      const medListe = document.getElementById("medListe");
-      const kontaktListe = document.getElementById("kontaktListe");
-      if (!kindId) {
-        medListe.innerHTML = "<li>Zuerst ein Kind anlegen.</li>";
-        kontaktListe.innerHTML = "";
-        return;
-      }
-      const [medikamente, kontakte] = await Promise.all([
-        api("/medikamente/kind/" + kindId + "?inkl_inaktiv=true"),
-        api("/kontakte/kind/" + kindId + "?inkl_inaktiv=true"),
-      ]);
-      medListe.innerHTML = medikamente.length ? medikamente.map((med) => `<li class="${med.aktiv ? "" : "inaktiv"}">
-        <div><strong>${escapeHtml(med.name)}</strong>${med.aktiv ? "" : " · inaktiv"}${med.dosierung ? `, ${escapeHtml(med.dosierung)}` : ""}${med.einnahmezeit ? ` · ${escapeHtml(med.einnahmezeit)}` : ""}</div>
-        <div class="aktionen">
-          <button type="button" class="sekundaer" data-aktion="bearbeiten" data-id="${med.id}">Bearbeiten</button>
-          ${med.aktiv
-            ? `<button type="button" class="leise" data-aktion="aus" data-id="${med.id}">Deaktivieren</button>`
-            : `<button type="button" class="sekundaer" data-aktion="an" data-id="${med.id}">Aktivieren</button>`}
-        </div>
-      </li>`).join("") : "<li>Keine Medikamente.</li>";
-      const typLabel = { eltern: "Eltern", asd: "Jugendamt (ASD)", vormund: "Vormund", sonstige: "Sonstige" };
-      kontaktListe.innerHTML = kontakte.length ? kontakte.map((kontakt) => `<li class="${kontakt.aktiv ? "" : "inaktiv"}">
-        <div><strong>${escapeHtml(kontakt.name)}</strong> · ${escapeHtml(typLabel[kontakt.typ] || kontakt.typ)}${kontakt.aktiv ? "" : " · inaktiv"}
-          ${kontakt.telefon ? `<br><span class="leis">${escapeHtml(kontakt.telefon)}</span>` : ""}
-        </div>
-        <div class="aktionen">
-          <button type="button" class="sekundaer" data-aktion="bearbeiten" data-id="${kontakt.id}">Bearbeiten</button>
-          ${kontakt.aktiv
-            ? `<button type="button" class="leise" data-aktion="aus" data-id="${kontakt.id}">Deaktivieren</button>`
-            : `<button type="button" class="sekundaer" data-aktion="an" data-id="${kontakt.id}">Aktivieren</button>`}
-        </div>
-      </li>`).join("") : "<li>Keine Kontakte.</li>";
-      medListe.dataset.roh = JSON.stringify(medikamente);
-      kontaktListe.dataset.roh = JSON.stringify(kontakte);
-    }
-
-    document.getElementById("kindForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const daten = formularDaten(event.target);
-      if (!daten.vorname) return hinweis("Vorname fehlt.");
-      try {
-        if (kindEditId) {
-          await api("/kinder/" + kindEditId, { method: "PUT", body: JSON.stringify(daten) });
-          hinweis("Kind gespeichert.");
-        } else {
-          await api("/kinder/", { method: "POST", body: JSON.stringify(daten) });
-          hinweis("Kind angelegt.");
-        }
-        kindEditId = null;
-        document.getElementById("kindSpeichern").textContent = "Anlegen";
-        document.getElementById("kindAbbrechen").hidden = true;
-        formLeeren(event.target);
-        await ladeKinder();
-      } catch (fehler) {
-        hinweis(fehler.message);
-      }
-    });
-
-    document.getElementById("kindAbbrechen").addEventListener("click", () => {
-      kindEditId = null;
-      formLeeren(document.getElementById("kindForm"));
-      document.getElementById("kindSpeichern").textContent = "Anlegen";
-      document.getElementById("kindAbbrechen").hidden = true;
-    });
-
-    document.getElementById("kinderListe").addEventListener("click", async (event) => {
-      const knopf = event.target.closest("button");
-      if (!knopf) return;
-      const id = Number(knopf.dataset.id);
-      const kind = kinder.find((eintrag) => eintrag.id === id);
-      try {
-        if (knopf.dataset.aktion === "bearbeiten" && kind) {
-          kindEditId = id;
-          formFuellen(document.getElementById("kindForm"), kind);
-          document.getElementById("kindSpeichern").textContent = "Änderungen speichern";
-          document.getElementById("kindAbbrechen").hidden = false;
-          return;
-        }
-        if (knopf.dataset.aktion === "aus") {
-          await api("/kinder/" + id, { method: "DELETE" });
-          hinweis("Kind deaktiviert.");
-        }
-        if (knopf.dataset.aktion === "an") {
-          await api("/kinder/" + id, { method: "PUT", body: JSON.stringify({ aktiv: true }) });
-          hinweis("Kind aktiviert.");
-        }
-        await ladeKinder();
-      } catch (fehler) {
-        hinweis(fehler.message);
-      }
-    });
-
-    document.getElementById("bezugsKind").addEventListener("change", () => {
-      medEditId = null;
-      kontaktEditId = null;
-      formLeeren(document.getElementById("medForm"));
-      formLeeren(document.getElementById("kontaktForm"));
-      document.getElementById("medSpeichern").textContent = "Hinzufügen";
-      document.getElementById("kontaktSpeichern").textContent = "Hinzufügen";
-      document.getElementById("medAbbrechen").hidden = true;
-      document.getElementById("kontaktAbbrechen").hidden = true;
-      ladeBezug().catch((fehler) => hinweis(fehler.message));
-    });
-
-    document.getElementById("medForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const kindId = document.getElementById("bezugsKind").value;
-      if (!kindId) return hinweis("Bitte ein Kind auswählen.");
-      const daten = formularDaten(event.target);
-      try {
-        if (medEditId) {
-          await api("/medikamente/" + medEditId, { method: "PUT", body: JSON.stringify(daten) });
-          hinweis("Medikament gespeichert.");
-        } else {
-          await api("/medikamente/", { method: "POST", body: JSON.stringify({ ...daten, kind_id: Number(kindId) }) });
-          hinweis("Medikament hinzugefügt.");
-        }
-        medEditId = null;
-        document.getElementById("medSpeichern").textContent = "Hinzufügen";
-        document.getElementById("medAbbrechen").hidden = true;
-        formLeeren(event.target);
-        await ladeBezug();
-      } catch (fehler) {
-        hinweis(fehler.message);
-      }
-    });
-
-    document.getElementById("medAbbrechen").addEventListener("click", () => {
-      medEditId = null;
-      formLeeren(document.getElementById("medForm"));
-      document.getElementById("medSpeichern").textContent = "Hinzufügen";
-      document.getElementById("medAbbrechen").hidden = true;
-    });
-
-    document.getElementById("medListe").addEventListener("click", async (event) => {
-      const knopf = event.target.closest("button");
-      if (!knopf) return;
-      const id = Number(knopf.dataset.id);
-      const medikamente = JSON.parse(document.getElementById("medListe").dataset.roh || "[]");
-      const med = medikamente.find((eintrag) => eintrag.id === id);
-      try {
-        if (knopf.dataset.aktion === "bearbeiten" && med) {
-          medEditId = id;
-          formFuellen(document.getElementById("medForm"), med);
-          document.getElementById("medSpeichern").textContent = "Änderungen speichern";
-          document.getElementById("medAbbrechen").hidden = false;
-          return;
-        }
-        if (knopf.dataset.aktion === "aus") await api("/medikamente/" + id, { method: "DELETE" });
-        if (knopf.dataset.aktion === "an") await api("/medikamente/" + id, { method: "PUT", body: JSON.stringify({ aktiv: true }) });
-        hinweis("Medikament aktualisiert.");
-        await ladeBezug();
-      } catch (fehler) {
-        hinweis(fehler.message);
-      }
-    });
-
-    document.getElementById("kontaktForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const kindId = document.getElementById("bezugsKind").value;
-      if (!kindId) return hinweis("Bitte ein Kind auswählen.");
-      const daten = formularDaten(event.target);
-      daten.typ = event.target.elements.typ.value;
-      try {
-        if (kontaktEditId) {
-          await api("/kontakte/" + kontaktEditId, { method: "PUT", body: JSON.stringify(daten) });
-          hinweis("Kontakt gespeichert.");
-        } else {
-          await api("/kontakte/", { method: "POST", body: JSON.stringify({ ...daten, kind_id: Number(kindId) }) });
-          hinweis("Kontakt hinzugefügt.");
-        }
-        kontaktEditId = null;
-        document.getElementById("kontaktSpeichern").textContent = "Hinzufügen";
-        document.getElementById("kontaktAbbrechen").hidden = true;
-        formLeeren(event.target);
-        await ladeBezug();
-      } catch (fehler) {
-        hinweis(fehler.message);
-      }
-    });
-
-    document.getElementById("kontaktAbbrechen").addEventListener("click", () => {
-      kontaktEditId = null;
-      formLeeren(document.getElementById("kontaktForm"));
-      document.getElementById("kontaktSpeichern").textContent = "Hinzufügen";
-      document.getElementById("kontaktAbbrechen").hidden = true;
-    });
-
-    document.getElementById("kontaktListe").addEventListener("click", async (event) => {
-      const knopf = event.target.closest("button");
-      if (!knopf) return;
-      const id = Number(knopf.dataset.id);
-      const kontakte = JSON.parse(document.getElementById("kontaktListe").dataset.roh || "[]");
-      const kontakt = kontakte.find((eintrag) => eintrag.id === id);
-      try {
-        if (knopf.dataset.aktion === "bearbeiten" && kontakt) {
-          kontaktEditId = id;
-          formFuellen(document.getElementById("kontaktForm"), kontakt);
-          document.getElementById("kontaktSpeichern").textContent = "Änderungen speichern";
-          document.getElementById("kontaktAbbrechen").hidden = false;
-          return;
-        }
-        if (knopf.dataset.aktion === "aus") await api("/kontakte/" + id, { method: "DELETE" });
-        if (knopf.dataset.aktion === "an") await api("/kontakte/" + id, { method: "PUT", body: JSON.stringify({ aktiv: true }) });
-        hinweis("Kontakt aktualisiert.");
-        await ladeBezug();
-      } catch (fehler) {
-        hinweis(fehler.message);
-      }
-    });
-
-    ladeKinder().catch((fehler) => hinweis(fehler.message));
-  </script>
+  <script src="/verwaltung.js"></script>
 </body>
 </html>

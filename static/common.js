@@ -101,3 +101,52 @@ function schichtKurz(wert) {
 function statusText(status) {
   return status === "freigegeben" ? "freigegeben" : "Entwurf";
 }
+
+function tagLang(iso) {
+  return datumAusIso(iso).toLocaleDateString("de-DE", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+}
+
+function monogramm(name) {
+  const teile = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!teile.length) return "?";
+  if (teile.length >= 2) return (teile[0][0] + teile[1][0]).toUpperCase();
+  return teile[0].slice(0, 3).toUpperCase();
+}
+
+function ampelPill(ampel, vorhanden) {
+  const klasse = !vorhanden ? "offen" : (ampel === "gruen" || ampel === "gelb" || ampel === "rot" ? ampel : "keine");
+  const label = !vorhanden ? "Offen" : (ampel ? ampelText(ampel) : "Keine Ampel");
+  return `<span class="pill ${klasse}">${punktHtml(vorhanden ? ampel : null, label, vorhanden)}<span>${escapeHtml(label)}</span></span>`;
+}
+
+function seedSatz(ergebnis) {
+  if (!ergebnis || (!ergebnis.kinder_neu && !ergebnis.berichte_neu)) {
+    return "Die Pilotkürzel waren schon da. Es wurde nichts Neues angelegt.";
+  }
+  const teile = [];
+  if (ergebnis.kinder_neu) teile.push(`${ergebnis.kinder_neu} Kürzel neu`);
+  if (ergebnis.kinder_vorhanden) teile.push(`${ergebnis.kinder_vorhanden} schon vorhanden`);
+  if (ergebnis.berichte_neu) teile.push(`${ergebnis.berichte_neu} Beispielberichte`);
+  return `${teile.join(" · ")}.`;
+}
+
+function sanft() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+}
+
+function frage(text, okText) {
+  const dialog = document.getElementById("dialog");
+  if (!dialog || typeof dialog.showModal !== "function") {
+    return Promise.resolve(window.confirm(text));
+  }
+  document.getElementById("dialogText").textContent = text;
+  const ok = document.getElementById("dialogOk");
+  ok.textContent = okText || "Weiter";
+  if (dialog.open) dialog.close();
+  dialog.showModal();
+  return new Promise((resolve) => {
+    dialog.addEventListener("close", () => resolve(dialog.returnValue === "ok"), { once: true });
+  });
+}
