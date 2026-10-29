@@ -31,8 +31,11 @@
       </select>
     </label>
     <input id="modellFrei" hidden placeholder="Modellname" aria-label="Anderes Modell">
+    <button type="button" id="statusNeu" class="sekundaer">Erneut prüfen</button>
+    <button type="button" id="ollamaStart" class="sekundaer" hidden>Ollama starten</button>
     <button type="button" id="modellLaden" class="sekundaer">Modell laden</button>
     <progress id="modellBalken" max="100" value="0" hidden></progress>
+    <p class="ollama-warn" id="modellGrund"></p>
     <p class="ollama-warn" id="modellWarn" hidden></p>
   </div>
 

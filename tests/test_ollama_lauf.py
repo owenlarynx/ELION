@@ -14,7 +14,45 @@ def test_fortschritt_aus_objekt():
     }
 
 
-def test_lage_ohne_ollama_setzt_keine_ampel(monkeypatch):
+def test_adressen_beginnen_mit_ipv4(monkeypatch):
+    monkeypatch.delenv("OLLAMA_URL", raising=False)
+    ollama_lauf._GEMERKT["basis"] = ""
+    assert ollama_lauf.adressen()[0] == "http://127.0.0.1:11434"
+
+
+def test_localhost_wird_genutzt_wenn_ipv4_nicht_antwortet(monkeypatch):
+    monkeypatch.delenv("OLLAMA_URL", raising=False)
+    ollama_lauf._GEMERKT["basis"] = ""
+
+    class _Antwort:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"models": [{"name": "llama3.1:8b"}]}
+
+    class Client:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def get(self, url):
+            if "127.0.0.1" in url:
+                raise httpx.ConnectError("ipv4")
+            return _Antwort()
+
+    monkeypatch.setattr(ollama_lauf.httpx, "AsyncClient", Client)
+    import asyncio
+    stand = asyncio.run(ollama_lauf.lage())
+    assert stand["erreichbar"] is True
+    assert stand["dienst"] == "laeuft"
+    assert ollama_lauf.gemerkte_basis() == "http://localhost:11434"
+    ollama_lauf._GEMERKT["basis"] = ""
     class Client:
         def __init__(self, *args, **kwargs):
             pass

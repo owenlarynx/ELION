@@ -22,6 +22,11 @@ def modell_fortschritt():
     return ollama_lauf._job_kopie()
 
 
+@router.post("/dienst")
+async def ollama_dienst_starten():
+    return await ollama_lauf.dienst_neu()
+
+
 @router.post("/modell")
 async def modell_waehlen(wunsch: ModellWunsch):
     name = (wunsch.modell or "").strip()

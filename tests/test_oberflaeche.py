@@ -17,6 +17,8 @@ KERNAKTIONEN = (
     "Spät",
     "Monat",
     "Modell laden",
+    "Erneut prüfen",
+    "Ollama starten",
     "Beispielampel",
     "Demo ausblenden",
 )

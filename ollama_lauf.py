@@ -1,13 +1,31 @@
 """Lokale Ollama-Lage und Modell-Download. Kein Cloud-Aufruf, keine Telemetrie."""
 
 import json
+import os
 import re
+import shutil
+import subprocess
+import sys
 import threading
 from pathlib import Path
 
 import httpx
 
 from database import database_url
+
+VORSCHLAEGE = ("llama3.1:8b", "qwen2.5:7b", "qwen2.5:14b")
+_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,80}$")
+_SPERR = threading.Lock()
+_JOB = {
+    "laeuft": False,
+    "fertig": False,
+    "fehler": None,
+    "status": "",
+    "prozent": None,
+    "modell": None,
+}
+_GEMERKT = {"basis": ""}
+_DIENST_VERSUCHT = False
 
 VORSCHLAEGE = ("llama3.1:8b", "qwen2.5:7b", "qwen2.5:14b")
 _NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,80}$")
@@ -70,7 +88,86 @@ def _job_kopie() -> dict:
         return dict(_JOB)
 
 
+def adressen() -> list[str]:
+    """127.0.0.1 zuerst. Unter Windows zeigt localhost oft auf IPv6, Ollama hört auf IPv4."""
+    gesetzt = os.environ.get("OLLAMA_URL", "").strip().rstrip("/")
+    if gesetzt:
+        endung = "/api/chat"
+        if gesetzt.endswith(endung):
+            gesetzt = gesetzt[: -len(endung)]
+        return [gesetzt]
+    liste = []
+    if _GEMERKT["basis"]:
+        liste.append(_GEMERKT["basis"])
+    for kandidat in ("http://127.0.0.1:11434", "http://localhost:11434"):
+        if kandidat not in liste:
+            liste.append(kandidat)
+    return liste
+
+
+def ollama_programm() -> str | None:
+    fund = shutil.which("ollama")
+    if fund:
+        return fund
+    if sys.platform != "win32":
+        return None
+    kandidaten = []
+    local = os.environ.get("LOCALAPPDATA", "")
+    if local:
+        kandidaten.append(Path(local) / "Programs" / "Ollama" / "ollama.exe")
+    programme = os.environ.get("ProgramFiles", "")
+    if programme:
+        kandidaten.append(Path(programme) / "Ollama" / "ollama.exe")
+    for pfad in kandidaten:
+        if pfad.is_file():
+            return str(pfad)
+    return None
+
+
+def dienst_starten() -> bool:
+    exe = ollama_programm()
+    if not exe:
+        return False
+    kwargs = {
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "stdin": subprocess.DEVNULL,
+    }
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        kwargs["cwd"] = str(Path(exe).parent)
+    subprocess.Popen([exe, "serve"], **kwargs)
+    return True
+
+
+async def _tags(basis: str):
+    timeout = httpx.Timeout(2.0, connect=1.0)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        antwort = await client.get(basis.rstrip("/") + "/api/tags")
+        antwort.raise_for_status()
+        return antwort.json()
+
+
+async def verbinden():
+    letzter_fehler = None
+    for basis in adressen():
+        try:
+            daten = await _tags(basis)
+        except httpx.HTTPError as fehler:
+            letzter_fehler = fehler
+            continue
+        _GEMERKT["basis"] = basis
+        return daten, basis
+    return None, letzter_fehler
+
+
+def gemerkte_basis() -> str:
+    return _GEMERKT["basis"]
+
+
 def _basis() -> str:
+    if _GEMERKT["basis"]:
+        return _GEMERKT["basis"]
     from wrap import ollama_basis
     return ollama_basis()
 
@@ -90,24 +187,44 @@ def modell_passt(vorhanden: str, gesucht: str) -> bool:
 
 
 async def lage() -> dict:
+    global _DIENST_VERSUCHT
     from wrap import ollama_modell
     modell = ollama_modell()
-    try:
-        async with httpx.AsyncClient(timeout=2.5) as client:
-            antwort = await client.get(_basis() + "/api/tags")
-            antwort.raise_for_status()
-            daten = antwort.json()
-    except httpx.HTTPError:
+    daten, _fehler = await verbinden()
+    if daten is None and sys.platform == "win32" and not _DIENST_VERSUCHT and ollama_programm():
+        _DIENST_VERSUCHT = True
+        if dienst_starten():
+            import asyncio
+            await asyncio.sleep(1.2)
+            daten, _fehler = await verbinden()
+    vorschlaege = list(VORSCHLAEGE)
+    fortschritt = _job_kopie()
+    if daten is None:
+        programm = ollama_programm()
+        if programm:
+            hinweis = (
+                "Ollama ist installiert, der Dienst antwortet aber nicht. "
+                "Bitte Ollama starten. Eine neue Prüfung setzt keine Ampel."
+            )
+            dienst = "gestoppt"
+            grund = "Modell laden wartet, bis Ollama antwortet. Zuerst „Ollama starten“ oder „Erneut prüfen“."
+        else:
+            hinweis = (
+                "Ollama ist nicht erreichbar. Eine neue Prüfung setzt keine Ampel. "
+                "Beispielampeln aus den Testdaten sind gekennzeichnet und keine KI-Prüfung."
+            )
+            dienst = "fehlt"
+            grund = "Modell laden bleibt aus, solange Ollama nicht antwortet. Ollama ist ein separates Programm."
         return {
             "erreichbar": False,
             "modell": modell,
             "modell_vorhanden": False,
-            "hinweis": (
-                "Ollama ist nicht erreichbar. Eine neue Prüfung setzt keine Ampel. "
-                "Beispielampeln aus den Testdaten sind gekennzeichnet und keine KI-Prüfung."
-            ),
-            "vorschlaege": list(VORSCHLAEGE),
-            "fortschritt": _job_kopie(),
+            "hinweis": hinweis,
+            "dienst": dienst,
+            "grund": grund,
+            "programm": bool(programm),
+            "vorschlaege": vorschlaege,
+            "fortschritt": fortschritt,
         }
     vorhanden = any(modell_passt(name, modell) for name in _namen(daten))
     if vorhanden:
@@ -122,9 +239,29 @@ async def lage() -> dict:
         "modell": modell,
         "modell_vorhanden": vorhanden,
         "hinweis": hinweis,
-        "vorschlaege": list(VORSCHLAEGE),
-        "fortschritt": _job_kopie(),
+        "dienst": "laeuft",
+        "grund": "",
+        "programm": True,
+        "vorschlaege": vorschlaege,
+        "fortschritt": fortschritt,
     }
+
+
+async def dienst_neu() -> dict:
+    global _DIENST_VERSUCHT
+    _DIENST_VERSUCHT = True
+    gestartet = dienst_starten()
+    if gestartet:
+        import asyncio
+        ende = asyncio.get_running_loop().time() + 6
+        while asyncio.get_running_loop().time() < ende:
+            daten, _fehler = await verbinden()
+            if daten is not None:
+                break
+            await asyncio.sleep(0.4)
+    stand = await lage()
+    stand["start_versucht"] = gestartet
+    return stand
 
 
 def _ziehen(modell: str) -> None:

@@ -1,6 +1,7 @@
 ELION-Einrichtung (Testfassung)
 
-Diese Datei installiert nur ELION: die Oberfläche und den lokalen Dienst.
+Doppelklick öffnet den Browser. Es bleibt kein Eingabeaufforderungsfenster offen.
+Beenden über das Startmenü „ELION beenden“.
 Ollama und das Sprachmodell sind nicht enthalten und werden nicht stillschweigend mitgeliefert.
 
 Die Setup-Datei selbst liegt in der Größenordnung einiger zehn Megabyte.
