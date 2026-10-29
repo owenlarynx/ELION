@@ -15,6 +15,7 @@ KERNAKTIONEN = (
     "Kindprofil",
     "Früh",
     "Spät",
+    "Monat",
 )
 FREMDE_MARKEN = ("Kuuna", "KUUNA", "Klient", "Klienten")
 
