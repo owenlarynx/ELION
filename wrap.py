@@ -131,7 +131,13 @@ def medikamente_text(medikamente: list, schicht: str | None = None) -> str:
 
 
 def ollama_chat_url() -> str:
-    roh = os.environ.get("OLLAMA_URL", "http://localhost:11434").strip().rstrip("/")
+    gemerkt = ""
+    try:
+        from ollama_lauf import gemerkte_basis
+        gemerkt = gemerkte_basis()
+    except Exception:
+        gemerkt = ""
+    roh = (gemerkt or os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")).strip().rstrip("/")
     if roh.endswith("/api/chat"):
         return roh
     return roh + "/api/chat"

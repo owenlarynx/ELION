@@ -113,7 +113,7 @@ def test_prompt_enthaelt_medikation_und_profil(client, ollama):
     assert "Zulässige Werte für ampel" in prompt
     assert "<<<RA_THOR_WRAP>>>" not in prompt
     assert "Hier den Ra-Thor-Wrap-Prompt einfügen" not in prompt
-    assert nachricht["url"] == "http://localhost:11434/api/chat"
+    assert nachricht["url"] == "http://127.0.0.1:11434/api/chat"
     system = nachricht["json"]["messages"][0]["content"]
     assert "nicht das Kind" in system
 

@@ -24,6 +24,31 @@ def umgebung() -> None:
         os.environ.setdefault("ELION_DATABASE_URL", "sqlite:///" + datenbank.as_posix())
 
 
+def _protokoll() -> None:
+    if not ist_gepackt():
+        return
+    datei = open(daten_verzeichnis() / "elion.log", "a", encoding="utf-8")
+    sys.stdout = datei
+    sys.stderr = datei
+
+
+def _melden(text: str) -> None:
+    if sys.platform == "win32":
+        import ctypes
+        ctypes.windll.user32.MessageBoxW(0, text, "ELION", 0x40)
+    else:
+        print(text)
+
+
+def _offen(url: str) -> bool:
+    import urllib.request
+    try:
+        with urllib.request.urlopen(url, timeout=0.4) as antwort:
+            return antwort.status < 500
+    except Exception:
+        return False
+
+
 def selbsttest() -> int:
     umgebung()
     import main  # noqa: F401
@@ -49,22 +74,23 @@ def haupt(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if "--selbsttest" in argv:
         return selbsttest()
+    _protokoll()
     umgebung()
     import uvicorn
     from main import app
 
     host = "127.0.0.1"
     port = 8000
+    url = f"http://{host}:{port}/"
+    if _offen(url):
+        webbrowser.open(url)
+        return 0
     server = uvicorn.Server(uvicorn.Config(app, host=host, port=port, log_level="info"))
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
-    url = f"http://{host}:{port}/"
     if not _wartet(url, thread):
-        print("ELION konnte nicht starten.")
+        _melden("ELION konnte nicht starten. Die Datei elion.log liegt im Ordner ELION unter AppData.")
         return 1
-    print("ELION läuft auf", url)
-    print("Ollama ist ein separates Programm und nicht in dieser Einrichtung enthalten.")
-    print("Dieses Fenster schließen beendet ELION.")
     webbrowser.open(url)
     try:
         while thread.is_alive():

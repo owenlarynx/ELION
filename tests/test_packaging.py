@@ -9,7 +9,9 @@ def test_bundle_root_findet_pruefvorlage():
     assert (bundle_root() / "static" / "index.html").is_file()
 
 
-def test_setup_enthaelt_kein_ollama_paket():
+def test_setup_ohne_konsole_und_ohne_ollama_paket():
+    text = Path("packaging/elion.spec").read_text(encoding="utf-8")
+    assert "console=False" in text
     text = Path("packaging/elion.iss").read_text(encoding="utf-8")
     for zeile in text.splitlines():
         if zeile.strip().lower().startswith("source:"):

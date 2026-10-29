@@ -7,7 +7,7 @@ AppVerName=ELION 0.9.0 Test
 DefaultDirName={autopf}\ELION
 DefaultGroupName=ELION
 OutputDir=..\dist
-OutputBaseFilename=ELION-Setup-0.9.0-test
+OutputBaseFilename=ELION-Setup-0.9.1-test
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
@@ -30,6 +30,7 @@ Source: "..\dist\ELION\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{group}\ELION"; Filename: "{app}\ELION.exe"
+Name: "{group}\ELION beenden"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM ELION.exe /F"
 Name: "{autodesktop}\ELION"; Filename: "{app}\ELION.exe"; Tasks: desktopicon
 
 [Run]

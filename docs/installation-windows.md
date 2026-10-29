@@ -10,16 +10,18 @@ Testfassung. Die Setup-Datei installiert nur ELION. Ollama und das Sprachmodell 
 
 ## Installation
 
-1. `ELION-Setup-0.9.0-test.exe` starten und den Schritten folgen.
+1. `ELION-Setup-0.9.1-test.exe` starten und den Schritten folgen.
 2. Eine Verknüpfung liegt im Startmenü. Auf Wunsch auch auf dem Desktop.
 3. Ollama getrennt einrichten. Im Setup kann die Downloadseite <https://ollama.com/download> geöffnet werden. Der Ollama-Installer kommt von dort, nicht aus der ELION-Datei.
-4. ELION über die Verknüpfung starten. Ein Fenster bleibt offen, der Browser zeigt die Oberfläche. Das Fenster schließen beendet ELION.
+4. ELION über die Verknüpfung starten. Es öffnet sich der Browser, ohne schwarzes Konsolenfenster. Ein zweiter Doppelklick öffnet die Oberfläche erneut. Beenden geht über das Startmenü „ELION beenden“.
+5. Läuft Ollama noch nicht, zeigt ELION das und bietet **Ollama starten** an, wenn das Programm installiert ist. **Erneut prüfen** fragt den Dienst noch einmal. ELION spricht `127.0.0.1:11434` an, damit Windows nicht auf IPv6 ausweicht.
 
 ## Erster Start und Modell
 
 Oben in der Oberfläche steht, ob Ollama erreichbar ist.
 
-- Fehlt Ollama, setzt eine neue Prüfung keine Ampel. Der Hinweis sagt das in klaren Worten.
+- Fehlt Ollama, setzt eine neue Prüfung keine Ampel. **Modell laden** bleibt dann aus und nennt den Grund.
+- Ist Ollama installiert, der Dienst aber aus, **Ollama starten** und danach **Erneut prüfen**.
 - Ist Ollama da und das Modell fehlt, bleibt der Download stehen, bis **Modell laden** bestätigt wird. Standard ist `llama3.1:8b`.
 - In der Auswahlliste gibt es außerdem `qwen2.5:7b` und `qwen2.5:14b`. Andere Namen lassen sich eintragen. Sehr große Modelle wie 70B sind nicht Teil dieser Einrichtung und werden nur geladen, wenn der Name bewusst gewählt wird.
 - `OLLAMA_MODEL` in der Umgebung hat Vorrang vor der Auswahl in der Oberfläche.

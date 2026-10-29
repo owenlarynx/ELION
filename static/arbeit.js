@@ -1037,6 +1037,11 @@ async function ladeOllama() {
     const knopf = document.getElementById("modellLaden");
     const lauf = Boolean(lage.fortschritt && lage.fortschritt.laeuft);
     knopf.disabled = lauf || !lage.erreichbar;
+    knopf.title = lage.erreichbar ? "Modell lokal laden" : (lage.grund || "Ollama antwortet noch nicht.");
+    document.getElementById("modellGrund").textContent = lage.erreichbar ? "" : (lage.grund || "");
+    const start = document.getElementById("ollamaStart");
+    start.hidden = lage.dienst !== "gestoppt";
+    start.disabled = lauf;
     knopf.textContent = lage.modell_vorhanden ? "Modell wechseln" : "Modell laden";
     const balken = document.getElementById("modellBalken");
     balken.hidden = !lauf;
@@ -1054,6 +1059,21 @@ async function ladeOllama() {
   }
 }
 
+document.getElementById("statusNeu").addEventListener("click", () => {
+  ladeOllama();
+});
+document.getElementById("ollamaStart").addEventListener("click", async () => {
+  const knopf = document.getElementById("ollamaStart");
+  knopf.disabled = true;
+  document.getElementById("ollamaText").textContent = "Ollama wird gestartet …";
+  try {
+    await api("/pruefung/dienst", { method: "POST" });
+  } catch (fehler) {
+    document.getElementById("ollamaText").textContent = fehler.message;
+  }
+  knopf.disabled = false;
+  await ladeOllama();
+});
 document.getElementById("modellWahl").addEventListener("change", () => {
   document.getElementById("modellFrei").hidden = document.getElementById("modellWahl").value !== "anderes";
   grossesModellHinweis();
