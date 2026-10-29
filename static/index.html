@@ -19,9 +19,22 @@
     <nav class="hauptnav" aria-label="Tagesarbeit">
       <a href="#heute" data-ansicht="heute">Heute</a>
       <a href="#woche" data-ansicht="woche">Woche</a>
+      <a href="#monat" data-ansicht="monat">Monat</a>
     </nav>
     <a class="nav-verwaltung" href="/verwaltung.html">Verwaltung</a>
   </header>
+  <div class="ollama-leiste" id="ollamaLeiste">
+    <p id="ollamaText">Prüfungsstand wird gelesen …</p>
+    <label>Modell
+      <select id="modellWahl" aria-label="Modell">
+        <option>llama3.1:8b</option>
+      </select>
+    </label>
+    <input id="modellFrei" hidden placeholder="Modellname" aria-label="Anderes Modell">
+    <button type="button" id="modellLaden" class="sekundaer">Modell laden</button>
+    <progress id="modellBalken" max="100" value="0" hidden></progress>
+    <p class="ollama-warn" id="modellWarn" hidden></p>
+  </div>
 
   <main>
     <noscript><p class="zustand">ELION braucht JavaScript in diesem Browser.</p></noscript>
@@ -124,6 +137,26 @@
         <span><i class="punkt offen" aria-hidden="true"></i> offen</span>
         <span>Die Ampel gilt der Dokumentation, nicht dem Kind.</span>
       </p>
+    </section>
+
+    <section id="ansicht-monat" class="ansicht" hidden>
+      <div class="seitenkopf">
+        <div>
+          <p class="kicker">Tagesarbeit</p>
+          <h1>Monat</h1>
+          <p class="hilfe">Dieselben Felder wie in der Woche: Früh und Spät vorn, Mittel und Nacht daneben. Tage außerhalb des Monats sind blasser.</p>
+        </div>
+      </div>
+      <p class="hinweis" id="monatStatus" role="status"></p>
+      <div class="wochenleiste">
+        <button type="button" class="sekundaer" id="monatZurueck">Vorheriger Monat</button>
+        <div class="wochenmitte">
+          <strong id="monatsLabel"></strong>
+          <button type="button" class="textlink" id="monatDieser">Dieser Monat</button>
+        </div>
+        <button type="button" class="sekundaer" id="monatVor">Nächster Monat</button>
+      </div>
+      <div id="monatsRahmen"></div>
     </section>
   </main>
 

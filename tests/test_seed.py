@@ -46,6 +46,7 @@ def test_pilot_seed_legt_kuerzel_ampeln_und_verlauf_an(client):
     assert "Bitte ergänzen:" in ms_bericht["verbesserte_fassung"]
     assert ms_bericht["umformulierungen"][0]["zitat"] == "total anstrengend"
     assert ms_bericht["kurzbegruendung"]
+    assert ms_bericht["pruef_quelle"] == "beispiel"
 
     est = next(kind for kind in client.get("/kinder/").json() if kind["vorname"] == "EST")
     est_berichte = client.get(f"/tagesberichte/kind/{est['id']}").json()
@@ -77,4 +78,17 @@ def test_seed_ueberschreibt_vorhandene_berichte_nicht(client):
     assert [bericht["rohtext"] for bericht in berichte] == ["Eigener Text."]
     assert client.get(f"/kinder/{ms['id']}").json()["besonderheiten"] == "eigene Notiz"
     assert client.get(f"/medikamente/kind/{ms['id']}").json() == []
+    assert len(client.get("/kinder/").json()) == 6
+
+
+def test_demo_ausblenden_und_wieder_laden(client):
+    erste = client.post("/seed/pilot")
+    assert erste.status_code == 200
+    weg = client.post("/seed/pilot/aus")
+    assert weg.status_code == 200, weg.text
+    assert weg.json()["ausgeblendet"] == 6
+    assert client.get("/kinder/").json() == []
+    wieder = client.post("/seed/pilot")
+    assert wieder.status_code == 200, wieder.text
+    assert wieder.json()["berichte_neu"] == 0
     assert len(client.get("/kinder/").json()) == 6

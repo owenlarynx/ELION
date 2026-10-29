@@ -706,7 +706,21 @@ button.fokusknopf, button.nebenknopf {
 button.fokusknopf { min-height: 58px; font-weight: 700; background: #fff; }
 button.nebenknopf { color: var(--leis); font-weight: 600; }
 button.fokusknopf:hover, button.nebenknopf:hover { border-color: var(--akzent); }
-.wochenzelle .tageshinweis { max-width: none; }
+table.woche td.fremd, table.woche th.fremd { opacity: 0.45; }
+.monatswoche { margin-top: 18px; }
+.ollama-leiste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: flex-end;
+  padding: 8px 22px 14px;
+  background: #f7f3ea;
+  border-bottom: 1px solid var(--linie);
+}
+.ollama-leiste p { margin: 0 0 8px; color: var(--tinte-weich); flex: 1 1 18rem; }
+.ollama-leiste label { margin: 0; min-width: 12rem; }
+.ollama-warn { flex-basis: 100%; font-size: 0.9rem; }
+progress { width: 9rem; height: 10px; margin-bottom: 10px; accent-color: var(--akzent); }
 
 .profilfelder { display: grid; gap: 10px; margin: 0 0 8px; }
 .profilfeld .label, .feldzeile .label { display: inline; margin: 0 6px 0 0; }

@@ -41,6 +41,7 @@ class BerichtOut(BaseModel):
     hinweise: List[str] = []
     umformulierungen: List[UmformulierungOut] = []
     kurzbegruendung: Optional[str] = None
+    pruef_quelle: Optional[str] = None
     ampel: Optional[Ampel]
     status: BerichtStatus
     erstellt_von: Optional[str]
@@ -62,6 +63,7 @@ class WochenTag(BaseModel):
     ampel: Optional[Ampel] = None
     hinweis: Optional[str] = None
     eintraege: List[WochenEintrag]
+    im_monat: bool = True
 
 
 class WochenKind(BaseModel):
@@ -87,6 +89,14 @@ class VersionOut(BaseModel):
 
 
 class WochenUebersicht(BaseModel):
+    von: date
+    bis: date
+    kinder: List[WochenKind]
+
+
+class MonatsUebersicht(BaseModel):
+    jahr: int
+    monat: int
     von: date
     bis: date
     kinder: List[WochenKind]
@@ -198,16 +208,12 @@ def berichte_eines_kindes(kind_id: int, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/woche", response_model=WochenUebersicht)
-def wochenuebersicht(von: Optional[date] = None, db: Session = Depends(get_db)):
-    if von is None:
-        heute = date.today()
-        von = heute - timedelta(days=heute.weekday())
-    bis = von + timedelta(days=6)
-    tage = [von + timedelta(days=versatz) for versatz in range(7)]
-    start = datetime.combine(von, time.min)
-    ende = datetime.combine(bis, time.max)
-
+def _tage_bauen(db: Session, tage: List[date], monat: Optional[tuple] = None) -> List[WochenKind]:
+    """Ampel je Kind und Tag. Dieselbe Regel wie die Woche, optional mit Monatsmarkierung."""
+    if not tage:
+        return []
+    start = datetime.combine(tage[0], time.min)
+    ende = datetime.combine(tage[-1], time.max)
     kinder = db.query(Kind).filter(Kind.aktiv == True).all()  # noqa: E712
     kinder.sort(key=lambda kind: ((kind.vorname or "").lower(), kind.id))
     berichte = (
@@ -215,7 +221,6 @@ def wochenuebersicht(von: Optional[date] = None, db: Session = Depends(get_db)):
         .filter(Tagesbericht.datum >= start, Tagesbericht.datum <= ende)
         .all()
     )
-
     je_kind = {}
     for bericht in berichte:
         je_kind.setdefault(bericht.kind_id, {}).setdefault(_datum_von(bericht), []).append(bericht)
@@ -243,11 +248,13 @@ def wochenuebersicht(von: Optional[date] = None, db: Session = Depends(get_db)):
                     key=lambda paar: SCHICHT_REIHENFOLGE.get(paar[0], 99),
                 )
             ]
+            im_monat = True if monat is None else (tag.year, tag.month) == monat
             tag_liste.append(WochenTag(
                 datum=tag,
                 ampel=schlechteste_ampel(eintraege),
                 hinweis=tageshinweis(eintraege),
                 eintraege=eintraege,
+                im_monat=im_monat,
             ))
         antwort.append(
             WochenKind(
@@ -258,7 +265,42 @@ def wochenuebersicht(von: Optional[date] = None, db: Session = Depends(get_db)):
                 tage=tag_liste,
             )
         )
-    return WochenUebersicht(von=von, bis=bis, kinder=antwort)
+    return antwort
+
+
+@router.get("/woche", response_model=WochenUebersicht)
+def wochenuebersicht(von: Optional[date] = None, db: Session = Depends(get_db)):
+    if von is None:
+        heute = date.today()
+        von = heute - timedelta(days=heute.weekday())
+    bis = von + timedelta(days=6)
+    tage = [von + timedelta(days=versatz) for versatz in range(7)]
+    return WochenUebersicht(von=von, bis=bis, kinder=_tage_bauen(db, tage))
+
+
+@router.get("/monat", response_model=MonatsUebersicht)
+def monatsuebersicht(jahr: Optional[int] = None, monat: Optional[int] = None, db: Session = Depends(get_db)):
+    heute = date.today()
+    jahr = heute.year if jahr is None else jahr
+    monat = heute.month if monat is None else monat
+    if monat < 1 or monat > 12 or jahr < 2000 or jahr > 2100:
+        raise HTTPException(status_code=422, detail="Monat ungültig")
+    erster = date(jahr, monat, 1)
+    letzter = date(jahr + 1, 1, 1) - timedelta(days=1) if monat == 12 else date(jahr, monat + 1, 1) - timedelta(days=1)
+    von = erster - timedelta(days=erster.weekday())
+    bis = letzter + timedelta(days=(6 - letzter.weekday()))
+    tage = []
+    cursor = von
+    while cursor <= bis:
+        tage.append(cursor)
+        cursor += timedelta(days=1)
+    return MonatsUebersicht(
+        jahr=jahr,
+        monat=monat,
+        von=von,
+        bis=bis,
+        kinder=_tage_bauen(db, tage, (jahr, monat)),
+    )
 
 
 @router.get("/{bericht_id}", response_model=BerichtOut)

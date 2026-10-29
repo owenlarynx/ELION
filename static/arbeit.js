@@ -6,8 +6,10 @@ let gespeicherterText = "";
 let nachtragModus = false;
 let verlaufLauf = 0;
 let wochenStart = montagDerWoche(new Date());
+let monatsStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let heuteLauf = 0;
 let wocheLauf = 0;
+let monatLauf = 0;
 let ansichtsDatum = heuteLokal();
 let herkunft = "heute";
 let aktuelleSchicht = "frueh";
@@ -17,17 +19,23 @@ let verbesserteFassung = "";
 const STUNDE = { frueh: "07", mittel: "13", spaet: "18", nacht: "22" };
 
 function zeige(name) {
-  for (const ansicht of ["heute", "bericht", "woche"]) {
+  for (const ansicht of ["heute", "bericht", "woche", "monat"]) {
     document.getElementById("ansicht-" + ansicht).hidden = ansicht !== name;
   }
   const markiert = name === "bericht" ? herkunft : name;
   document.querySelectorAll("nav a[data-ansicht]").forEach((link) => {
     link.classList.toggle("aktiv", link.dataset.ansicht === markiert);
   });
-  document.title = { heute: "ELION – Heute", bericht: "ELION – Bericht", woche: "ELION – Woche" }[name] || "ELION";
+  document.title = {
+    heute: "ELION – Heute",
+    bericht: "ELION – Bericht",
+    woche: "ELION – Woche",
+    monat: "ELION – Monat",
+  }[name] || "ELION";
   adresseSetzen(name);
   if (name === "heute") ladeHeute();
   if (name === "woche") ladeWoche();
+  if (name === "monat") ladeMonat();
 }
 
 function adresseSetzen(name) {
@@ -345,6 +353,7 @@ function pruefungAnzeigen(bericht) {
   }
   ziel.innerHTML = `<section class="pruefpanel ${klasse}">
     <p class="ampelzeile">${ampelPill(bericht.ampel, true)}</p>
+    ${bericht.pruef_quelle === "beispiel" ? `<p class="leis">Beispielampel aus den Testdaten, ohne KI-Prüfung.</p>` : ""}
     ${begruendung ? `<h3>Fazit</h3><p>${escapeHtml(begruendung)}</p>` : ""}
     ${paarliste}
     ${liste}
@@ -513,9 +522,13 @@ async function oeffneKind(id, datum, von, schicht) {
   if (!id) return;
   kindId = id;
   ansichtsDatum = datum || heuteLokal();
-  herkunft = von === "woche" ? "woche" : "heute";
+  herkunft = von === "woche" || von === "monat" ? von : "heute";
   naechsteSchicht = schicht == null ? null : schicht;
-  document.getElementById("zurueck").textContent = herkunft === "woche" ? "Zur Woche" : "Zur Übersicht";
+  document.getElementById("zurueck").textContent = {
+    woche: "Zur Woche",
+    monat: "Zum Monat",
+    heute: "Zur Übersicht",
+  }[herkunft];
   document.getElementById("formHinweis").textContent = "";
   try {
     await ladeBericht();
@@ -852,7 +865,7 @@ async function ladeWoche() {
         const zellen = kind.tage.map((tag) => {
             const darstellung = tagesdarstellung(tag, name);
             const notiz = fokusNotiz(tag);
-            return `<td class="${tag.datum === heute ? "heute" : ""}"><div class="wochenzelle" title="${escapeHtml(darstellung.titel)}">
+            return `<td class="${tag.datum === heute ? "heute" : ""} ${tag.im_monat === false ? "fremd" : ""}"><div class="wochenzelle" title="${escapeHtml(darstellung.titel)}">
               <div class="wochenfokus">
                 ${schichtFokus(kind, tag, "frueh", "Früh")}
                 ${schichtFokus(kind, tag, "spaet", "Spät")}
@@ -892,6 +905,183 @@ if (kindParameter) {
   oeffneKind(Number(kindParameter), parameter.get("datum") || undefined, "heute", schicht);
 } else if (location.hash === "#woche") {
   zeige("woche");
+} else if (location.hash === "#monat") {
+  zeige("monat");
 } else {
   zeige("heute");
 }
+
+document.getElementById("monatZurueck").addEventListener("click", () => {
+  monatsStart = new Date(monatsStart.getFullYear(), monatsStart.getMonth() - 1, 1);
+  ladeMonat();
+});
+document.getElementById("monatVor").addEventListener("click", () => {
+  monatsStart = new Date(monatsStart.getFullYear(), monatsStart.getMonth() + 1, 1);
+  ladeMonat();
+});
+document.getElementById("monatDieser").addEventListener("click", () => {
+  const heute = new Date();
+  monatsStart = new Date(heute.getFullYear(), heute.getMonth(), 1);
+  ladeMonat();
+});
+
+async function ladeMonat() {
+  const lauf = ++monatLauf;
+  const ziel = document.getElementById("monatsRahmen");
+  const label = document.getElementById("monatsLabel");
+  label.textContent = monatsStart.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  const dieser = new Date();
+  document.getElementById("monatDieser").disabled = monatsStart.getFullYear() === dieser.getFullYear() && monatsStart.getMonth() === dieser.getMonth();
+  ziel.innerHTML = "<p class=\"leis\">Der Monat wird geladen …</p>";
+  try {
+    const daten = await api("/tagesberichte/monat?jahr=" + monatsStart.getFullYear() + "&monat=" + (monatsStart.getMonth() + 1));
+    if (lauf !== monatLauf) return;
+    if (!daten.kinder.length) {
+      ziel.innerHTML = "<div class=\"zustand\"><p>Noch keine Kinder in diesem Monat.</p><p><a href=\"/verwaltung.html\">Zur Verwaltung</a></p></div>";
+      return;
+    }
+    const alle = daten.kinder[0].tage;
+    const heute = heuteLokal();
+    let html = "";
+    for (let start = 0; start < alle.length; start += 7) {
+      const block = alle.slice(start, start + 7);
+      const von = datumAusIso(block[0].datum);
+      const bis = datumAusIso(block[block.length - 1].datum);
+      const format = (datum) => datum.toLocaleDateString("de-DE", { day: "numeric", month: "numeric" });
+      const kinder = daten.kinder.map((kind) => ({
+        ...kind,
+        tage: kind.tage.slice(start, start + 7),
+      }));
+      const kopf = `<tr><th scope="col">Kind</th>${block.map((tag) => {
+        const text = datumAusIso(tag.datum).toLocaleDateString("de-DE", { weekday: "short", day: "numeric" });
+        const klasse = [tag.datum === heute ? "heute" : "", tag.im_monat === false ? "fremd" : ""].filter(Boolean).join(" ");
+        return `<th scope="col" class="${klasse}">${escapeHtml(text)}</th>`;
+      }).join("")}</tr>`;
+      const nameDatum = block.find((tag) => tag.im_monat !== false)?.datum || block[0].datum;
+      const koerper = kinder.map((kind) => {
+        const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
+        const zellen = kind.tage.map((tag) => {
+          const darstellung = tagesdarstellung(tag, name);
+          const notiz = fokusNotiz(tag);
+          const klasse = [tag.datum === heute ? "heute" : "", tag.im_monat === false ? "fremd" : ""].filter(Boolean).join(" ");
+          return `<td class="${klasse}"><div class="wochenzelle" title="${escapeHtml(darstellung.titel)}">
+            <div class="wochenfokus">
+              ${schichtFokus(kind, tag, "frueh", "Früh")}
+              ${schichtFokus(kind, tag, "spaet", "Spät")}
+            </div>
+            <div class="wocheneben">
+              ${schichtFokus(kind, tag, "mittel", "Mittel", true)}
+              ${schichtFokus(kind, tag, "nacht", "Nacht", true)}
+              ${schichtOhne(kind, tag)}
+            </div>
+            ${notiz ? `<span class="tageshinweis">${escapeHtml(notiz)}</span>` : ""}
+          </div></td>`;
+        }).join("");
+        return `<tr><th scope="row"><button type="button" class="link" data-kind="${kind.id}" data-datum="${escapeHtml(nameDatum)}">${escapeHtml(name)}</button></th>${zellen}</tr>`;
+      }).join("");
+      html += `<section class="monatswoche"><h2>${format(von)} – ${format(bis)}</h2><div class="wochenrahmen"><table class="woche"><thead>${kopf}</thead><tbody>${koerper}</tbody></table></div></section>`;
+    }
+    ziel.innerHTML = html;
+  } catch (fehler) {
+    if (lauf !== monatLauf) return;
+    ziel.innerHTML = zustandHtml("Der Monat ist gerade nicht erreichbar.", fehler.message, "neu");
+  }
+}
+
+document.getElementById("monatsRahmen").addEventListener("click", (event) => {
+  const aktion = event.target.closest("[data-aktion]");
+  if (aktion && aktion.dataset.aktion === "neu") {
+    ladeMonat();
+    return;
+  }
+  const knopf = event.target.closest("[data-kind]");
+  if (!knopf) return;
+  const schicht = Object.prototype.hasOwnProperty.call(knopf.dataset, "schicht") ? knopf.dataset.schicht : null;
+  oeffneKind(Number(knopf.dataset.kind), knopf.dataset.datum, "monat", schicht);
+});
+
+let ollamaPoll = null;
+let letzteLage = null;
+
+function gewaehltesModell() {
+  const wahl = document.getElementById("modellWahl");
+  if (!wahl) return "";
+  if (wahl.value === "anderes") return document.getElementById("modellFrei").value.trim();
+  return wahl.value;
+}
+
+function grossesModellHinweis() {
+  const warn = document.getElementById("modellWarn");
+  const name = gewaehltesModell();
+  const gross = /70b|405b/i.test(name);
+  warn.hidden = !gross;
+  warn.textContent = gross
+    ? "Sehr großes Modell. Nicht Teil der Einrichtung. Nur laden, wenn dieser Rechner das trägt."
+    : "";
+}
+
+async function ladeOllama() {
+  const leiste = document.getElementById("ollamaLeiste");
+  if (!leiste) return;
+  try {
+    const lage = await api("/pruefung/lage");
+    document.getElementById("ollamaText").textContent = (lage.fortschritt && lage.fortschritt.fehler) || lage.hinweis;
+    const wahl = document.getElementById("modellWahl");
+    const namen = [...new Set([...(lage.vorschlaege || []), lage.modell].filter(Boolean))];
+    const aktuell = wahl.value;
+    wahl.innerHTML = namen.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")
+      + "<option value=\"anderes\">anderes Modell</option>";
+    if (namen.includes(lage.modell)) wahl.value = lage.modell;
+    else if (namen.includes(aktuell) || aktuell === "anderes") wahl.value = aktuell;
+    document.getElementById("modellFrei").hidden = wahl.value !== "anderes";
+    const knopf = document.getElementById("modellLaden");
+    const lauf = Boolean(lage.fortschritt && lage.fortschritt.laeuft);
+    knopf.disabled = lauf || !lage.erreichbar;
+    knopf.textContent = lage.modell_vorhanden ? "Modell wechseln" : "Modell laden";
+    const balken = document.getElementById("modellBalken");
+    balken.hidden = !lauf;
+    if (lage.fortschritt && lage.fortschritt.prozent != null) balken.value = lage.fortschritt.prozent;
+    if (lage.fortschritt && lage.fortschritt.status && lauf) {
+      const prozent = lage.fortschritt.prozent == null ? "" : ` ${lage.fortschritt.prozent} %`;
+      document.getElementById("ollamaText").textContent = `${lage.fortschritt.status}${prozent}`;
+    }
+    grossesModellHinweis();
+    if (ollamaPoll) clearTimeout(ollamaPoll);
+    ollamaPoll = lauf ? setTimeout(ladeOllama, 1000) : null;
+    letzteLage = lage;
+  } catch (fehler) {
+    document.getElementById("ollamaText").textContent = "Die Prüfungslage ist gerade nicht erreichbar.";
+  }
+}
+
+document.getElementById("modellWahl").addEventListener("change", () => {
+  document.getElementById("modellFrei").hidden = document.getElementById("modellWahl").value !== "anderes";
+  grossesModellHinweis();
+});
+document.getElementById("modellFrei").addEventListener("input", grossesModellHinweis);
+document.getElementById("modellLaden").addEventListener("click", async () => {
+  const modell = gewaehltesModell();
+  if (!modell) {
+    document.getElementById("ollamaText").textContent = "Bitte ein Modell angeben.";
+    return;
+  }
+  if (letzteLage && letzteLage.modell_vorhanden && modell === letzteLage.modell) {
+    document.getElementById("ollamaText").textContent = `Modell ${modell} ist bereit.`;
+    return;
+  }
+  const gross = /70b|405b/i.test(modell);
+  const text = gross
+    ? `${modell} ist sehr groß und nicht Teil der Einrichtung. Trotzdem lokal laden?`
+    : `Modell ${modell} lokal laden? Das kann mehrere Gigabyte brauchen und startet erst jetzt.`;
+  if (!(await frage(text, "Laden"))) return;
+  const knopf = document.getElementById("modellLaden");
+  knopf.disabled = true;
+  try {
+    await api("/pruefung/modell", { method: "POST", body: JSON.stringify({ modell, zustimmung: true }) });
+    await ladeOllama();
+  } catch (fehler) {
+    document.getElementById("ollamaText").textContent = fehler.message;
+    knopf.disabled = false;
+  }
+});
+ladeOllama();

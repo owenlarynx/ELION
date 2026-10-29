@@ -146,6 +146,13 @@ class Tagesbericht(Base):
         return paare
 
     @property
+    def pruef_quelle(self):
+        text = self._pruef_daten().get("quelle")
+        if text == "beispiel":
+            return "beispiel"
+        return None
+
+    @property
     def kurzbegruendung(self):
         text = self._pruef_daten().get("kurzbegruendung")
         if not isinstance(text, str):

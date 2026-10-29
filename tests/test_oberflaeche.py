@@ -15,6 +15,10 @@ KERNAKTIONEN = (
     "Kindprofil",
     "Früh",
     "Spät",
+    "Monat",
+    "Modell laden",
+    "Beispielampel",
+    "Demo ausblenden",
 )
 FREMDE_MARKEN = ("Kuuna", "KUUNA", "Klient", "Klienten")
 

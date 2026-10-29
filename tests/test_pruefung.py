@@ -15,7 +15,7 @@ def test_pruefung_setzt_ampel_aus_json(client, ollama, ampel):
     assert ergebnis["ampel"] == ampel
     assert "Hinweise:" in ergebnis["wrap_ergebnis"]
     assert ollama["payloads"][0]["json"]["format"] == "json"
-    assert ollama["payloads"][0]["json"]["model"] == "llama3.1"
+    assert ollama["payloads"][0]["json"]["model"] == "llama3.1:8b"
 
 
 def test_pruefung_gruen_trotz_rot_im_wort(client, ollama):

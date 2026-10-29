@@ -1,0 +1,45 @@
+name: Windows-Installer
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Abhängigkeiten
+        run: python -m pip install -r requirements.txt pyinstaller
+      - name: App bündeln
+        run: pyinstaller packaging/elion.spec --noconfirm --clean
+      - name: Selbsttest der App
+        run: .\dist\ELION\ELION.exe --selbsttest
+      - name: Inno Setup
+        run: choco install innosetup --no-progress -y
+      - name: Setup-Datei bauen
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging\elion.iss'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ELION-Setup
+          path: dist/ELION-Setup-0.9.0-test.exe
+          if-no-files-found: error
+      - name: Pre-Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          name: ELION ${{ github.ref_name }}
+          body: |
+            Testfassung der Einrichtung. Enthalten ist nur ELION, nicht Ollama und nicht das Sprachmodell.
+            Anleitung: docs/installation-windows.md
+          files: dist/ELION-Setup-0.9.0-test.exe

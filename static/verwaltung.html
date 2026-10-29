@@ -19,6 +19,7 @@
     <nav class="hauptnav" aria-label="Tagesarbeit">
       <a href="/#heute">Heute</a>
       <a href="/#woche">Woche</a>
+      <a href="/#monat">Monat</a>
     </nav>
     <a class="nav-verwaltung aktiv" href="/verwaltung.html" aria-current="page">Verwaltung</a>
   </header>
@@ -37,9 +38,12 @@
     <section class="pilotkarte">
       <div>
         <h2>Pilotdaten</h2>
-        <p class="hilfe">Legt die Kürzel AK, MS, LS, BH, AB und EST an, falls sie fehlen, dazu Beispielberichte mit Ampel. Vorhandene Berichte bleiben unverändert.</p>
+        <p class="hilfe">Legt die Kürzel AK, MS, LS, BH, AB und EST an, falls sie fehlen, dazu Beispielberichte. Ampeln darin sind Testdaten ohne KI-Prüfung. Vorhandene Berichte bleiben unverändert.</p>
       </div>
-      <button type="button" id="pilotLaden">Pilotdaten laden</button>
+      <div class="aktionen">
+        <button type="button" id="pilotLaden">Pilotdaten laden</button>
+        <button type="button" class="sekundaer" id="pilotAus">Demo ausblenden</button>
+      </div>
     </section>
 
     <div class="verwaltung-layout">

@@ -1,11 +1,10 @@
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 import models  # noqa: F401  (registriert die Tabellen)
 from database import ensure_schema
+from pfade import bundle_root
 
 ensure_schema()
 
@@ -19,13 +18,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from routes import berichte, kinder, kontakte, medikamente, seed
+from routes import berichte, kinder, kontakte, medikamente, pruefung, seed
 
 app.include_router(kinder.router)
 app.include_router(berichte.router)
 app.include_router(medikamente.router)
 app.include_router(kontakte.router)
 app.include_router(seed.router)
+app.include_router(pruefung.router)
 
-STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_DIR = bundle_root() / "static"
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

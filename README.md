@@ -5,7 +5,7 @@ Prüfung und Ampel bleiben vor Ort: lokales Ollama, keine Cloud. Im Pilot nur K�
 
 - Backend: Python, FastAPI, SQLAlchemy, SQLite
 - Frontend: statisches HTML/JS (`static/`), ohne Build-Schritt
-- KI-Prüfung: lokales Ollama (`llama3.1`), erreichbar unter `http://localhost:8000` für ELION und `http://localhost:11434` für Ollama
+- KI-Prüfung: lokales Ollama, Standardmodell `llama3.1:8b`
 
 ## Start auf dem Mac
 
@@ -20,7 +20,7 @@ Dann http://localhost:8000 öffnen.
 
 Unter **Verwaltung → Pilotdaten laden** erscheinen die Kürzel AK, MS, LS, BH, AB und EST mit Beispielberichten. Dieselbe Aktion liegt auf der leeren Startseite und als `POST /seed/pilot`. Ein zweiter Lauf legt nichts doppelt an und überschreibt keine vorhandenen Berichte. Wer neu beginnen will, beendet ELION, löscht `elion.db` und startet erneut.
 
-Für eine neue Prüfung muss Ollama laufen. Die mitgelieferten Ampeln sind schon gespeichert und bleiben sichtbar, auch wenn Ollama aus ist. Installation auf dem Mac, unter Windows und Linux, Docker Compose und die Prüfvorlage stehen in [docs/OLLAMA.md](docs/OLLAMA.md). Kurz auf dem Mac: `brew install ollama` oder der Installer von ollama.com, danach `ollama pull llama3.1`.
+Für eine neue Prüfung muss Ollama laufen. In der Oberfläche steht der Status. Das Modell `llama3.1:8b` (etwa 4,7 GB) wird erst nach Zustimmung geladen. Ohne Ollama setzt eine neue Prüfung keine Ampel. Beispielampeln der Pilotkürzel sind als Testdaten gekennzeichnet. Installation: [docs/OLLAMA.md](docs/OLLAMA.md). Kurz auf dem Mac: `brew install ollama` oder der Installer von ollama.com.
 
 ## Start unter Windows
 
@@ -31,7 +31,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-http://localhost:8000 öffnen, dann wie oben die Pilotdaten laden. Ollama: [docs/OLLAMA.md](docs/OLLAMA.md).
+http://localhost:8000 öffnen, dann wie oben die Pilotdaten laden. Die Windows-Einrichtung steht in [docs/installation-windows.md](docs/installation-windows.md). Ollama: [docs/OLLAMA.md](docs/OLLAMA.md).
 
 ## Docker Compose
 
@@ -63,10 +63,10 @@ Die Datenbank lässt sich über `ELION_DATABASE_URL` setzen. Standard ist `sqlit
 ```bash
 export ELION_DATABASE_URL=sqlite:///./elion.db
 export OLLAMA_URL=http://localhost:11434
-export OLLAMA_MODEL=llama3.1
+export OLLAMA_MODEL=llama3.1:8b
 ```
 
-`OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname, Standard ist `llama3.1`. Für deutlich besseres Deutsch eignet sich ein größeres Modell, wenn die Hardware reicht, zum Beispiel `qwen2.5:14b` oder `llama3.1:70b`. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Der Text zwischen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` geht bei jeder Prüfung mit; die Markierungen selbst nicht.
+`OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname und hat Vorrang vor der Auswahl in der Oberfläche. Standard ist `llama3.1:8b`. Weitere alltagstaugliche Modelle sind `qwen2.5:7b` und, bei mehr Arbeitsspeicher, `qwen2.5:14b`. Ein 70B-Modell ist nicht Teil der Einrichtung. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Der Text zwischen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` geht bei jeder Prüfung mit; die Markierungen selbst nicht.
 
 Beim Start werden fehlende Tabellen und Spalten in einer bestehenden SQLite-Datei ergänzt. Ein freigegebener Bericht lässt sich als Nachtrag ändern. Die bisherige Fassung bleibt im Verlauf, die Ampel gilt als veraltet, und der Bericht muss erneut geprüft und freigegeben werden.
 
