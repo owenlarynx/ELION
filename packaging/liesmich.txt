@@ -1,0 +1,12 @@
+ELION-Einrichtung (Testfassung)
+
+Diese Datei installiert nur ELION: die Oberfläche und den lokalen Dienst.
+Ollama und das Sprachmodell sind nicht enthalten und werden nicht stillschweigend mitgeliefert.
+
+Die Setup-Datei selbst liegt in der Größenordnung einiger zehn Megabyte.
+Ollama ist ein separates Programm (Installer von ollama.com, üblicherweise einige hundert Megabyte).
+Das Modell llama3.1:8b kommt danach in ELION, erst nach Zustimmung, und braucht etwa 4,7 GB.
+
+Daten liegen unter %LOCALAPPDATA%\ELION.
+Beim Entfernen von ELION über „Apps“ bleibt dieser Ordner erhalten.
+Wer auch die lokale Datenbank löschen will, entfernt den Ordner danach von Hand.

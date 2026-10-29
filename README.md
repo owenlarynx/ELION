@@ -31,7 +31,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-http://localhost:8000 öffnen, dann wie oben die Pilotdaten laden. Ollama: [docs/OLLAMA.md](docs/OLLAMA.md).
+http://localhost:8000 öffnen, dann wie oben die Pilotdaten laden. Die Windows-Einrichtung steht in [docs/installation-windows.md](docs/installation-windows.md). Ollama: [docs/OLLAMA.md](docs/OLLAMA.md).
 
 ## Docker Compose
 

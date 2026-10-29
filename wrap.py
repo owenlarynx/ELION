@@ -6,7 +6,9 @@ from pathlib import Path
 
 import httpx
 
-APP_DIR = Path(__file__).resolve().parent
+from pfade import bundle_root
+
+APP_DIR = bundle_root()
 DEFAULT_PROMPT = APP_DIR / "prompts" / "ra_thor_wrap.md"
 RA_THOR_START = "<<<RA_THOR_WRAP>>>"
 RA_THOR_ENDE = "<<<ENDE_RA_THOR_WRAP>>>"
