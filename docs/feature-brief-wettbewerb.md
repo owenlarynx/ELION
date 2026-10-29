@@ -28,11 +28,8 @@ ELION als lokales (on-prem) Dokumentations- und Prüfungssystem für stationäre
 - Keine Übernahme von Kuuna-Texten, Claims, Screenshots, Logos oder Design-Elementen.
 - Interne Bezeichnung ELION ok; kommerzielle Marke separat klären (bekanntes Risiko).
 - Pilotkinder nur Initialen: AK, MS, LS, BH, AB, EST.
-- Medikation und Kontakte bleiben on-prem. In Beispielen nur Initialen und klar gekennzeichnete Platzhalter, keine echten Namen oder Präparate.
 
-## 5. Interner Pitch (nicht für öffentliche Claims)
-
-Nicht für Website, Angebot oder andere öffentliche Claims.
+## 5. Interner Pitch (nicht für öffentliche Claims — Repo ist public)
 
 **ELION** ist die lokale Ampel-Prüfung für Tagesdokus: schreiben wie bisher, prüfen mit Ollama + Ra-Thor-Wrap, Freigabe mit Verlauf — ohne Cloud-Zwang. Gegenüber **Kuuna** und anderen Cloud-SaaS: Daten bleiben vor Ort, Fokus auf Vollständigkeit und pädagogische Qualität statt generischer KI-Zusammenfassung. Gegenüber klassischen Systemen (z. B. **Vivendi** u. a.): schlanke Schicht- und Ampel-Arbeitsoberfläche für den Alltag in der Wohngruppe, statt schwerer Träger-Suite. Windows-EXE + Ollama für den Start auf dem Dienstrechner.
 
