@@ -94,7 +94,11 @@ async function ladeBezug() {
     api("/kontakte/kind/" + kindId + "?inkl_inaktiv=true"),
   ]);
   medListe.innerHTML = medikamente.length ? medikamente.map((med) => `<li class="${med.aktiv ? "" : "inaktiv"}">
-    <div><strong>${escapeHtml(med.name)}</strong>${med.aktiv ? "" : " <span class=\"pill keine\">inaktiv</span>"}${med.dosierung ? `, ${escapeHtml(med.dosierung)}` : ""}${med.einnahmezeit ? ` · ${escapeHtml(med.einnahmezeit)}` : ""}${med.hinweis ? `<br><span class="leis">${escapeHtml(med.hinweis)}</span>` : ""}</div>
+    <div class="stammkarte"><strong>${escapeHtml(med.name)}</strong>${med.aktiv ? "" : " <span class=\"pill keine\">inaktiv</span>"}
+      <span class="feldzeile"><span class="label">Dosierung</span> ${escapeHtml(med.dosierung || "—")}</span>
+      <span class="feldzeile"><span class="label">Einnahmezeit</span> ${escapeHtml(med.einnahmezeit || "—")}</span>
+      ${med.hinweis ? `<span class="feldzeile"><span class="label">Hinweis</span> ${escapeHtml(med.hinweis)}</span>` : ""}
+    </div>
     <div class="aktionen">
       <button type="button" class="sekundaer" data-aktion="bearbeiten" data-id="${med.id}">Bearbeiten</button>
       ${med.aktiv
@@ -104,9 +108,11 @@ async function ladeBezug() {
   </li>`).join("") : "<li>Keine Medikation hinterlegt. Die Prüfung spricht Medikamente dann nicht an.</li>";
   const typLabel = { eltern: "Eltern", asd: "Jugendamt (ASD)", vormund: "Vormund", sonstige: "Sonstige" };
   kontaktListe.innerHTML = kontakte.length ? kontakte.map((kontakt) => `<li class="${kontakt.aktiv ? "" : "inaktiv"}">
-    <div><strong>${escapeHtml(kontakt.name)}</strong> · ${escapeHtml(typLabel[kontakt.typ] || kontakt.typ)}${kontakt.aktiv ? "" : " <span class=\"pill keine\">inaktiv</span>"}
-      ${kontakt.telefon ? `<br><span class="leis">${escapeHtml(kontakt.telefon)}</span>` : ""}
-      ${kontakt.email ? `<br><span class="leis">${escapeHtml(kontakt.email)}</span>` : ""}
+    <div class="stammkarte"><strong>${escapeHtml(kontakt.name)}</strong>${kontakt.aktiv ? "" : " <span class=\"pill keine\">inaktiv</span>"}
+      <span class="feldzeile"><span class="label">Art</span> ${escapeHtml(typLabel[kontakt.typ] || kontakt.typ)}</span>
+      <span class="feldzeile"><span class="label">Telefon</span> ${escapeHtml(kontakt.telefon || "—")}</span>
+      <span class="feldzeile"><span class="label">E-Mail</span> ${escapeHtml(kontakt.email || "—")}</span>
+      ${kontakt.hinweis ? `<span class="feldzeile"><span class="label">Hinweis</span> ${escapeHtml(kontakt.hinweis)}</span>` : ""}
     </div>
     <div class="aktionen">
       <button type="button" class="sekundaer" data-aktion="bearbeiten" data-id="${kontakt.id}">Bearbeiten</button>

@@ -621,7 +621,7 @@ details .prueftext { margin-top: 8px; }
 table.woche {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 980px;
   background: transparent;
   border: 0;
   box-shadow: none;
@@ -683,6 +683,36 @@ button.tagknopf {
 }
 
 button.tagknopf:hover { background: rgba(47, 111, 102, 0.06); }
+
+.wochenzelle { display: grid; gap: 4px; min-width: 7.4rem; }
+.wochenfokus, .wocheneben { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+button.fokusknopf, button.nebenknopf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 2px;
+  border-radius: 10px;
+  background: var(--feld);
+  color: inherit;
+  border: 1px solid var(--linie);
+  cursor: pointer;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+button.fokusknopf { min-height: 58px; font-weight: 700; background: #fff; }
+button.nebenknopf { color: var(--leis); font-weight: 600; }
+button.fokusknopf:hover, button.nebenknopf:hover { border-color: var(--akzent); }
+.wochenzelle .tageshinweis { max-width: none; }
+
+.profilfelder { display: grid; gap: 10px; margin: 0 0 8px; }
+.profilfeld .label, .feldzeile .label { display: inline; margin: 0 6px 0 0; }
+.stammliste { list-style: none; padding: 0; margin: 0; }
+.stammkarte { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.feldzeile { display: block; font-size: 0.92rem; font-weight: 450; }
 
 .zelle { display: grid; justify-items: center; gap: 3px; }
 .zelle .kuerzel { margin: 0; font-size: 0.75rem; letter-spacing: 0.04em; color: var(--leis); }

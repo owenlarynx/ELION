@@ -301,7 +301,8 @@ function pruefungAnzeigen(bericht) {
   const klasse = bericht.ampel || "keine";
   if (!bericht.ampel && !begruendung && !hinweise.length && !fassung && !paare.length) {
     ziel.innerHTML = `<section class="pruefpanel ruhig">
-      <p>Die Prüfung hat keine Ampel gesetzt.</p>
+      <p class="ampelzeile">${ampelPill(null, true)}</p>
+      <p>Es wurde keine Ampel gesetzt. Die Dokumentation bleibt unverändert.</p>
       <div class="prueftext">${escapeHtml(bericht.wrap_ergebnis)}</div>
     </section>`;
     return;
@@ -480,20 +481,31 @@ async function ladeBericht() {
   const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
   document.getElementById("kindName").textContent = name;
   document.getElementById("berichtTag").value = ansichtsDatum;
-  const profilBlock = (titel, text) => `<p><span class="label">${escapeHtml(titel)}</span><br>${escapeHtml(text || "keine Angaben")}</p>`;
+  const profilFeld = (titel, text) => `<div class="profilfeld"><span class="label">${escapeHtml(titel)}</span><div>${escapeHtml(text || "keine Angaben")}</div></div>`;
   const profil = [
-    kind.paragraph ? profilBlock("Rechtsgrundlage", kind.paragraph) : "",
-    profilBlock("Besonderheiten", kind.besonderheiten),
-    profilBlock("Dokumentationshinweise", kind.dokumentationshinweise),
+    kind.paragraph ? profilFeld("Rechtsgrundlage", kind.paragraph) : "",
+    profilFeld("Besonderheiten", kind.besonderheiten),
+    profilFeld("Dokumentationshinweise", kind.dokumentationshinweise),
   ].filter(Boolean).join("");
   const medListe = medikamente.length
-    ? `<ul class="profil-liste">${medikamente.map((med) => `<li><strong>${escapeHtml(med.name)}</strong>${med.dosierung ? `, ${escapeHtml(med.dosierung)}` : ""}${med.einnahmezeit ? ` · ${escapeHtml(med.einnahmezeit)}` : ""}${med.hinweis ? `<br><span class="leis">${escapeHtml(med.hinweis)}</span>` : ""}</li>`).join("")}</ul>`
+    ? `<ul class="stammliste">${medikamente.map((med) => `<li class="stammkarte">
+        <strong>${escapeHtml(med.name)}</strong>
+        <span class="feldzeile"><span class="label">Dosierung</span> ${escapeHtml(med.dosierung || "—")}</span>
+        <span class="feldzeile"><span class="label">Einnahmezeit</span> ${escapeHtml(med.einnahmezeit || "—")}</span>
+        ${med.hinweis ? `<span class="feldzeile"><span class="label">Hinweis</span> ${escapeHtml(med.hinweis)}</span>` : ""}
+      </li>`).join("")}</ul>`
     : "<p class=\"leis\">Keine Medikation hinterlegt. Die Prüfung spricht Medikamente dann nicht an.</p>";
   const typLabel = { eltern: "Eltern", asd: "Jugendamt", vormund: "Vormund", sonstige: "Sonstige" };
   const kontaktListe = kontakte.length
-    ? `<ul class="profil-liste">${kontakte.map((kontakt) => `<li><strong>${escapeHtml(kontakt.name)}</strong> · ${escapeHtml(typLabel[kontakt.typ] || kontakt.typ)}${kontakt.telefon ? `<br><span class="leis">${escapeHtml(kontakt.telefon)}</span>` : ""}</li>`).join("")}</ul>`
+    ? `<ul class="stammliste">${kontakte.map((kontakt) => `<li class="stammkarte">
+        <strong>${escapeHtml(kontakt.name)}</strong>
+        <span class="feldzeile"><span class="label">Art</span> ${escapeHtml(typLabel[kontakt.typ] || kontakt.typ)}</span>
+        <span class="feldzeile"><span class="label">Telefon</span> ${escapeHtml(kontakt.telefon || "—")}</span>
+        <span class="feldzeile"><span class="label">E-Mail</span> ${escapeHtml(kontakt.email || "—")}</span>
+        ${kontakt.hinweis ? `<span class="feldzeile"><span class="label">Hinweis</span> ${escapeHtml(kontakt.hinweis)}</span>` : ""}
+      </li>`).join("")}</ul>`
     : "<p class=\"leis\">Keine Kontakte hinterlegt.</p>";
-  document.getElementById("profilKarte").innerHTML = `<h2>Profil</h2>${profil}<h3>Medikation</h3>${medListe}<h3>Kontakte</h3>${kontaktListe}<p><a class="textlink" href="/verwaltung.html">In der Verwaltung ändern</a></p>`;
+  document.getElementById("profilKarte").innerHTML = `<h2>Kindprofil</h2><div class="profilfelder">${profil}</div><h3>Medikamente</h3>${medListe}<h3>Kontakte</h3>${kontaktListe}<p class="leis">Liegt nur auf diesem Rechner.</p><p><a class="textlink" href="/verwaltung.html">In der Verwaltung bearbeiten</a></p>`;
   slotInFormular(startSchicht());
 }
 
@@ -776,18 +788,35 @@ document.getElementById("wocheDiese").addEventListener("click", () => {
   ladeWoche();
 });
 
-function minipunkte(tag) {
-  const eintraege = tag.eintraege || [];
-  if (!eintraege.length) return "";
-  if (!eintraege.some((eintrag) => eintrag.schicht)) {
-    const eintrag = eintraege[0];
-    return punktHtml(eintrag.ampel, `Tag: ${ampelText(eintrag.ampel)}`, true);
+function eintragDerSchicht(tag, wert) {
+  return (tag.eintraege || []).find((bericht) => (bericht.schicht || "") === wert) || null;
+}
+
+function schichtFokus(kind, tag, wert, kurz, neben) {
+  const eintrag = eintragDerSchicht(tag, wert);
+  const vorhanden = Boolean(eintrag);
+  const titel = `${kurz}: ${vorhanden ? ampelText(eintrag.ampel) : "offen"}`;
+  const klasse = neben ? "nebenknopf" : "fokusknopf";
+  return `<button type="button" class="${klasse}" data-kind="${kind.id}" data-datum="${escapeHtml(tag.datum)}" data-schicht="${escapeHtml(wert)}" title="${escapeHtml(titel)}">
+    <span>${escapeHtml(kurz)}</span>
+    ${punktHtml(vorhanden ? eintrag.ampel : null, titel, vorhanden)}
+    <span class="kuerzel">${escapeHtml(ampelKuerzel(vorhanden ? eintrag.ampel : null, vorhanden))}</span>
+  </button>`;
+}
+
+function schichtOhne(kind, tag) {
+  const eintrag = eintragDerSchicht(tag, "");
+  if (!eintrag) return "";
+  return schichtFokus(kind, tag, "", "Tag", true);
+}
+
+function fokusNotiz(tag) {
+  const teile = [];
+  for (const [wert, kurz] of [["frueh", "Früh"], ["spaet", "Spät"]]) {
+    const eintrag = eintragDerSchicht(tag, wert);
+    if (eintrag && !eintrag.ampel) teile.push(`${kurz} ungeprüft`);
   }
-  return SCHICHTEN.map((schicht) => {
-    const eintrag = eintraege.find((kandidat) => kandidat.schicht === schicht[0]);
-    const vorhanden = Boolean(eintrag);
-    return punktHtml(vorhanden ? eintrag.ampel : null, `${schicht[2]}: ${vorhanden ? ampelText(eintrag.ampel) : "offen"}`, vorhanden);
-  }).join("");
+  return teile.join(" · ");
 }
 
 async function ladeWoche() {
@@ -820,12 +849,22 @@ async function ladeWoche() {
     })();
     koerper.innerHTML = woche.kinder.map((kind) => {
       const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
-      const zellen = kind.tage.map((tag) => {
-        const darstellung = tagesdarstellung(tag, name);
-        const hinweis = tag.hinweis ? `<span class="tageshinweis">${escapeHtml(tag.hinweis)}</span>` : "";
-        const punkte = minipunkte(tag);
-        return `<td class="${tag.datum === heute ? "heute" : ""}"><button type="button" class="tagknopf" data-kind="${kind.id}" data-datum="${escapeHtml(tag.datum)}" title="${escapeHtml(darstellung.titel)}"><span class="zelle">${punktHtml(darstellung.vorhanden ? tag.ampel : null, darstellung.titel, darstellung.vorhanden)}<span class="kuerzel">${escapeHtml(darstellung.kuerzel)}</span>${punkte ? `<span class="minipunkte">${punkte}</span>` : ""}${hinweis}</span></button></td>`;
-      }).join("");
+        const zellen = kind.tage.map((tag) => {
+            const darstellung = tagesdarstellung(tag, name);
+            const notiz = fokusNotiz(tag);
+            return `<td class="${tag.datum === heute ? "heute" : ""}"><div class="wochenzelle" title="${escapeHtml(darstellung.titel)}">
+              <div class="wochenfokus">
+                ${schichtFokus(kind, tag, "frueh", "Früh")}
+                ${schichtFokus(kind, tag, "spaet", "Spät")}
+              </div>
+              <div class="wocheneben">
+                ${schichtFokus(kind, tag, "mittel", "Mittel", true)}
+                ${schichtFokus(kind, tag, "nacht", "Nacht", true)}
+                ${schichtOhne(kind, tag)}
+              </div>
+              ${notiz ? `<span class="tageshinweis">${escapeHtml(notiz)}</span>` : ""}
+            </div></td>`;
+          }).join("");
       return `<tr><th scope="row"><button type="button" class="link" data-kind="${kind.id}" data-datum="${escapeHtml(nameDatum)}">${escapeHtml(name)}</button></th>${zellen}</tr>`;
     }).join("");
   } catch (fehler) {
@@ -842,7 +881,8 @@ document.getElementById("wochenKörper").addEventListener("click", (event) => {
   }
   const knopf = event.target.closest("[data-kind]");
   if (!knopf) return;
-  oeffneKind(Number(knopf.dataset.kind), knopf.dataset.datum, "woche");
+  const schicht = Object.prototype.hasOwnProperty.call(knopf.dataset, "schicht") ? knopf.dataset.schicht : null;
+  oeffneKind(Number(knopf.dataset.kind), knopf.dataset.datum, "woche", schicht);
 });
 
 const parameter = new URLSearchParams(location.search);

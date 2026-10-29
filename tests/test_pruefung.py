@@ -134,6 +134,17 @@ def test_prompt_nennt_mittel_und_nacht(client, ollama, schicht, label):
     assert label in text
 
 
+def test_standardvorlage_enthaelt_ra_thor_wrap(client, ollama):
+    kind = kind_anlegen(client, vorname="Minka")
+    bericht = bericht_anlegen(client, kind["id"], rohtext="Minka hat Brot gegessen.")
+    ollama["inhalt"] = modell_json("gruen")
+    assert pruefen(client, bericht["id"])["ampel"] == "gruen"
+    text = ollama["payloads"][-1]["json"]["messages"][1]["content"]
+    assert "Ra-Thor employ loop" in text
+    assert "<<<RA_THOR_WRAP>>>" not in text
+    assert "<<<ENDE_RA_THOR_WRAP>>>" not in text
+
+
 def test_prompt_pfad_und_ollama_env(client, ollama, monkeypatch, tmp_path):
     vorlage = tmp_path / "eigene.md"
     vorlage.write_text(

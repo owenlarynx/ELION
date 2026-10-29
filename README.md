@@ -47,14 +47,14 @@ ELION: http://localhost:8000. Der erste Start lädt das Modell (mehrere GB). Die
 2. Text schreiben, **Speichern Entwurf**, **Prüfung starten**. Die Prüfung zeigt Ampel, Fazit, gelbe Lücken `[Bitte ergänzen: …]`, Paare von wertend zu pädagogisch und kurze Hinweise.
 3. **Übernehmen** setzt den Vorschlag in den Bericht. **Anpassen** öffnet ihn zum Ändern. Danach erneut speichern, bei Bedarf neu prüfen, dann **Freigeben**.
 4. **Bearbeiten / Nachtrag** ändert einen freigegebenen Bericht. Die alte Fassung bleibt im Verlauf, die Ampel wird verworfen und muss neu gesetzt werden.
-5. Woche blättert vor und zurück. Ein Tag öffnet den Bericht dieses Datums, auch wenn noch keiner da ist.
+5. Woche stellt Frühdienst und Spätdienst als Hauptfelder dar. Mittel- und Nachtdienst bleiben daneben. Ein Feld öffnet diese Schicht, auch an einem vergangenen Tag.
 6. Verwaltung legt Kinder an, deaktiviert sie, pflegt Medikation nur wo sie gilt, und Kontakte. **Bericht öffnen** springt in die Tagesarbeit.
 
 Schichten: Frühdienst, Mitteldienst (etwa 12 Stunden), Spätdienst, Nachtdienst. Ältere Berichte ohne Schicht bleiben gültig. Startseite und Woche zeigen pro Kind und Tag die schlechteste Ampel, Rot vor Gelb vor Grün.
 
 ## Prüfung
 
-Die Prüfung eines Berichts läuft über Ollama in einem Aufruf und erwartet eine JSON-Antwort mit Ampel, Umformulierungen (Zitat und Vorschlag), kurzen pädagogischen Hinweisen und einer verbesserten Fassung. Fehlende Angaben stehen darin als Platzhalter `[Bitte ergänzen: …]`. Zitate, die im Text nicht vorkommen, werden verworfen. Sätze mit neuen Handlungen, Orten oder Gegenständen ebenfalls. Fehlt danach ein Fakt aus dem Original, bleibt eine rechtschreibkorrigierte Fassung des Originals. Ist keine Medikation hinterlegt, entfallen Medikationshinweise, Medikationsplatzhalter und Sätze wie „Keine Medikation wurde gegeben“. Wenn Ollama nicht erreichbar ist, bleibt die Ampel leer; es wird kein Grün gesetzt.
+Die Ampel bewertet die Dokumentation, nicht das Kind. Die Prüfung läuft lokal über Ollama in einem Aufruf und erwartet eine JSON-Antwort mit Ampel, Umformulierungen (Zitat und Vorschlag), kurzen pädagogischen Hinweisen und einer verbesserten Fassung. Die Prüfanweisung samt Ra-Thor-Wrap liegt in `prompts/ra_thor_wrap.md` und wird bei jedem Prüfen neu gelesen (`ELION_PROMPT_PATH`). Fehlende Angaben stehen darin als Platzhalter `[Bitte ergänzen: …]`. Zitate, die im Text nicht vorkommen, werden verworfen. Sätze mit neuen Handlungen, Orten oder Gegenständen ebenfalls. Fehlt danach ein Fakt aus dem Original, bleibt eine rechtschreibkorrigierte Fassung des Originals. Ist keine Medikation hinterlegt, entfallen Medikationshinweise, Medikationsplatzhalter und Sätze wie „Keine Medikation wurde gegeben“. Wenn Ollama nicht erreichbar ist, bleibt die Ampel leer; es wird kein Grün gesetzt.
 
 ## Konfiguration
 
@@ -66,7 +66,7 @@ export OLLAMA_URL=http://localhost:11434
 export OLLAMA_MODEL=llama3.1
 ```
 
-`OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname, Standard ist `llama3.1`. Für deutlich besseres Deutsch eignet sich ein größeres Modell, wenn die Hardware reicht, zum Beispiel `qwen2.5:14b` oder `llama3.1:70b`. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Zwischen den Markierungen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` kann später der Ra-Thor-Wrap-Text stehen.
+`OLLAMA_URL` ist die Basisadresse. `OLLAMA_MODEL` ist der Modellname, Standard ist `llama3.1`. Für deutlich besseres Deutsch eignet sich ein größeres Modell, wenn die Hardware reicht, zum Beispiel `qwen2.5:14b` oder `llama3.1:70b`. Die Prüfanweisung liegt in `prompts/ra_thor_wrap.md` und lässt sich über `ELION_PROMPT_PATH` auf eine andere Datei legen. Der Text zwischen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` geht bei jeder Prüfung mit; die Markierungen selbst nicht.
 
 Beim Start werden fehlende Tabellen und Spalten in einer bestehenden SQLite-Datei ergänzt. Ein freigegebener Bericht lässt sich als Nachtrag ändern. Die bisherige Fassung bleibt im Verlauf, die Ampel gilt als veraltet, und der Bericht muss erneut geprüft und freigegeben werden.
 

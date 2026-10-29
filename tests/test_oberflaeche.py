@@ -12,6 +12,9 @@ KERNAKTIONEN = (
     "Zur Tagesarbeit",
     "Medikation",
     "Nachtrag speichern",
+    "Kindprofil",
+    "Früh",
+    "Spät",
 )
 FREMDE_MARKEN = ("Kuuna", "KUUNA", "Klient", "Klienten")
 

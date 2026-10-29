@@ -89,15 +89,8 @@ Die Prüfanweisung steht in `prompts/ra_thor_wrap.md`, nicht im Python-Code.
 (`ampel`, `umformulierungen`, `hinweise`, `kurzbegruendung`, `verbesserte_fassung`).
 Standardmodell ist `llama3.1`. Ein größeres Modell wie `qwen2.5:14b` oder `llama3.1:70b` formuliert auf Deutsch sicherer, wenn die Hardware das trägt. Der Name steht in `OLLAMA_MODEL`.
 
-Den späteren Ra-Thor-Wrap-Text zwischen diese beiden Zeilen setzen:
-
-```text
-<<<RA_THOR_WRAP>>>
-<<<ENDE_RA_THOR_WRAP>>>
-```
-
-Solange dort nur der HTML-Kommentar steht, geht er nicht an das Modell.
-Nach dem Speichern gilt der neue Text beim nächsten Klick auf „Prüfen“, ohne Neustart.
+Der Text zwischen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` geht bei jeder Prüfung mit. Die Markierungen selbst nicht.
+Nach dem Speichern gilt eine geänderte Datei beim nächsten Klick auf „Prüfung starten“, ohne Neustart.
 Liegt die Datei woanders:
 
 ```bash
