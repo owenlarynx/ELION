@@ -3,14 +3,14 @@
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden = []
-for paket in ("uvicorn", "sqlalchemy", "starlette", "fastapi", "anyio", "pydantic"):
+for paket in ("uvicorn", "starlette", "fastapi", "anyio", "pydantic"):
     hidden += collect_submodules(paket)
 
 a = Analysis(
-    ["packaging/elion_start.py"],
-    pathex=["."],
+    ["elion_start.py"],
+    pathex=[".."],
     binaries=[],
-    datas=[("static", "static"), ("prompts", "prompts")],
+    datas=[("../static", "static"), ("../prompts", "prompts")],
     hiddenimports=hidden + [
         "main",
         "database",

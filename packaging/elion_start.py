@@ -11,7 +11,7 @@ import webbrowser
 from pathlib import Path
 
 WURZEL = Path(__file__).resolve().parent.parent
-if str(WURZEL) not in sys.path:
+if not getattr(sys, "frozen", False) and str(WURZEL) not in sys.path:
     sys.path.insert(0, str(WURZEL))
 
 from pfade import bundle_root, daten_verzeichnis, ist_gepackt  # noqa: E402
