@@ -353,6 +353,7 @@ function pruefungAnzeigen(bericht) {
   }
   ziel.innerHTML = `<section class="pruefpanel ${klasse}">
     <p class="ampelzeile">${ampelPill(bericht.ampel, true)}</p>
+    ${bericht.pruef_quelle === "beispiel" ? `<p class="leis">Beispielampel aus den Testdaten, ohne KI-Prüfung.</p>` : ""}
     ${begruendung ? `<h3>Fazit</h3><p>${escapeHtml(begruendung)}</p>` : ""}
     ${paarliste}
     ${liste}
@@ -998,3 +999,89 @@ document.getElementById("monatsRahmen").addEventListener("click", (event) => {
   const schicht = Object.prototype.hasOwnProperty.call(knopf.dataset, "schicht") ? knopf.dataset.schicht : null;
   oeffneKind(Number(knopf.dataset.kind), knopf.dataset.datum, "monat", schicht);
 });
+
+let ollamaPoll = null;
+let letzteLage = null;
+
+function gewaehltesModell() {
+  const wahl = document.getElementById("modellWahl");
+  if (!wahl) return "";
+  if (wahl.value === "anderes") return document.getElementById("modellFrei").value.trim();
+  return wahl.value;
+}
+
+function grossesModellHinweis() {
+  const warn = document.getElementById("modellWarn");
+  const name = gewaehltesModell();
+  const gross = /70b|405b/i.test(name);
+  warn.hidden = !gross;
+  warn.textContent = gross
+    ? "Sehr großes Modell. Nicht Teil der Einrichtung. Nur laden, wenn dieser Rechner das trägt."
+    : "";
+}
+
+async function ladeOllama() {
+  const leiste = document.getElementById("ollamaLeiste");
+  if (!leiste) return;
+  try {
+    const lage = await api("/pruefung/lage");
+    document.getElementById("ollamaText").textContent = (lage.fortschritt && lage.fortschritt.fehler) || lage.hinweis;
+    const wahl = document.getElementById("modellWahl");
+    const namen = [...new Set([...(lage.vorschlaege || []), lage.modell].filter(Boolean))];
+    const aktuell = wahl.value;
+    wahl.innerHTML = namen.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("")
+      + "<option value=\"anderes\">anderes Modell</option>";
+    if (namen.includes(lage.modell)) wahl.value = lage.modell;
+    else if (namen.includes(aktuell) || aktuell === "anderes") wahl.value = aktuell;
+    document.getElementById("modellFrei").hidden = wahl.value !== "anderes";
+    const knopf = document.getElementById("modellLaden");
+    const lauf = Boolean(lage.fortschritt && lage.fortschritt.laeuft);
+    knopf.disabled = lauf || !lage.erreichbar;
+    knopf.textContent = lage.modell_vorhanden ? "Modell wechseln" : "Modell laden";
+    const balken = document.getElementById("modellBalken");
+    balken.hidden = !lauf;
+    if (lage.fortschritt && lage.fortschritt.prozent != null) balken.value = lage.fortschritt.prozent;
+    if (lage.fortschritt && lage.fortschritt.status && lauf) {
+      const prozent = lage.fortschritt.prozent == null ? "" : ` ${lage.fortschritt.prozent} %`;
+      document.getElementById("ollamaText").textContent = `${lage.fortschritt.status}${prozent}`;
+    }
+    grossesModellHinweis();
+    if (ollamaPoll) clearTimeout(ollamaPoll);
+    ollamaPoll = lauf ? setTimeout(ladeOllama, 1000) : null;
+    letzteLage = lage;
+  } catch (fehler) {
+    document.getElementById("ollamaText").textContent = "Die Prüfungslage ist gerade nicht erreichbar.";
+  }
+}
+
+document.getElementById("modellWahl").addEventListener("change", () => {
+  document.getElementById("modellFrei").hidden = document.getElementById("modellWahl").value !== "anderes";
+  grossesModellHinweis();
+});
+document.getElementById("modellFrei").addEventListener("input", grossesModellHinweis);
+document.getElementById("modellLaden").addEventListener("click", async () => {
+  const modell = gewaehltesModell();
+  if (!modell) {
+    document.getElementById("ollamaText").textContent = "Bitte ein Modell angeben.";
+    return;
+  }
+  if (letzteLage && letzteLage.modell_vorhanden && modell === letzteLage.modell) {
+    document.getElementById("ollamaText").textContent = `Modell ${modell} ist bereit.`;
+    return;
+  }
+  const gross = /70b|405b/i.test(modell);
+  const text = gross
+    ? `${modell} ist sehr groß und nicht Teil der Einrichtung. Trotzdem lokal laden?`
+    : `Modell ${modell} lokal laden? Das kann mehrere Gigabyte brauchen und startet erst jetzt.`;
+  if (!(await frage(text, "Laden"))) return;
+  const knopf = document.getElementById("modellLaden");
+  knopf.disabled = true;
+  try {
+    await api("/pruefung/modell", { method: "POST", body: JSON.stringify({ modell, zustimmung: true }) });
+    await ladeOllama();
+  } catch (fehler) {
+    document.getElementById("ollamaText").textContent = fehler.message;
+    knopf.disabled = false;
+  }
+});
+ladeOllama();

@@ -41,6 +41,7 @@ class BerichtOut(BaseModel):
     hinweise: List[str] = []
     umformulierungen: List[UmformulierungOut] = []
     kurzbegruendung: Optional[str] = None
+    pruef_quelle: Optional[str] = None
     ampel: Optional[Ampel]
     status: BerichtStatus
     erstellt_von: Optional[str]

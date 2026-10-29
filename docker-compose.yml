@@ -23,7 +23,7 @@ services:
         condition: service_healthy
     environment:
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -36,7 +36,7 @@ services:
       - "8000:8000"
     environment:
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
       ELION_DATABASE_URL: sqlite:////data/elion.db
       ELION_PROMPT_PATH: /app/prompts/ra_thor_wrap.md
     volumes:

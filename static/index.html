@@ -23,6 +23,18 @@
     </nav>
     <a class="nav-verwaltung" href="/verwaltung.html">Verwaltung</a>
   </header>
+  <div class="ollama-leiste" id="ollamaLeiste">
+    <p id="ollamaText">Prüfungsstand wird gelesen …</p>
+    <label>Modell
+      <select id="modellWahl" aria-label="Modell">
+        <option>llama3.1:8b</option>
+      </select>
+    </label>
+    <input id="modellFrei" hidden placeholder="Modellname" aria-label="Anderes Modell">
+    <button type="button" id="modellLaden" class="sekundaer">Modell laden</button>
+    <progress id="modellBalken" max="100" value="0" hidden></progress>
+    <p class="ollama-warn" id="modellWarn" hidden></p>
+  </div>
 
   <main>
     <noscript><p class="zustand">ELION braucht JavaScript in diesem Browser.</p></noscript>

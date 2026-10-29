@@ -135,9 +135,26 @@ def ollama_chat_url() -> str:
     return roh + "/api/chat"
 
 
+def ollama_basis() -> str:
+    url = ollama_chat_url()
+    endung = "/api/chat"
+    if url.endswith(endung):
+        return url[: -len(endung)]
+    return url
+
+
 def ollama_modell() -> str:
-    name = os.environ.get("OLLAMA_MODEL", "llama3.1").strip()
-    return name or "llama3.1"
+    name = os.environ.get("OLLAMA_MODEL", "").strip()
+    if name:
+        return name
+    try:
+        from ollama_lauf import gespeichertes_modell
+        gespeichert = gespeichertes_modell()
+    except Exception:
+        gespeichert = None
+    if gespeichert:
+        return gespeichert
+    return "llama3.1:8b"
 
 
 def prompt_pfad() -> Path:

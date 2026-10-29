@@ -32,6 +32,11 @@ class SeedErgebnis(BaseModel):
     kuerzel: list[str]
 
 
+class SeedAus(BaseModel):
+    ausgeblendet: int
+    kuerzel: list[str]
+
+
 def _wrap_text(ampel: str, begruendung: str, paare: list[dict], hinweise: list[str]) -> str:
     label = {"gruen": "Grün", "gelb": "Gelb", "rot": "Rot"}[ampel]
     zeilen = [f"Ampel: {label}"]
@@ -57,6 +62,7 @@ def _paket(ampel: str, begruendung: str, hinweise: list[str], fassung: str, paar
                 "hinweise": hinweise,
                 "kurzbegruendung": begruendung,
                 "umformulierungen": paare,
+                "quelle": "beispiel",
             },
             ensure_ascii=False,
         ),
@@ -359,8 +365,8 @@ def lege_pilot_an(db: Session, heute: date | None = None) -> SeedErgebnis:
             kinder_neu += 1
         else:
             kinder_vorhanden += 1
-        if not kind.aktiv:
-            continue
+            if not kind.aktiv:
+                kind.aktiv = True
         if db.query(Tagesbericht).filter(Tagesbericht.kind_id == kind.id).first() is not None:
             continue
         med = profil.get("medikament")
@@ -398,3 +404,17 @@ def pilot_laden(db: Session = Depends(get_db)):
     ergebnis = lege_pilot_an(db)
     db.commit()
     return ergebnis
+
+
+@router.post("/pilot/aus", response_model=SeedAus)
+def pilot_ausblenden(db: Session = Depends(get_db)):
+    """Blendet nur die Demo-Kürzel aus. Berichte bleiben in der lokalen Datei."""
+    ausgeblendet = 0
+    for name in KUERZEL:
+        kind = db.query(Kind).filter(Kind.vorname == name, Kind.aktiv == True).first()  # noqa: E712
+        if kind is None:
+            continue
+        kind.aktiv = False
+        ausgeblendet += 1
+    db.commit()
+    return SeedAus(ausgeblendet=ausgeblendet, kuerzel=list(KUERZEL))

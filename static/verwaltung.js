@@ -321,3 +321,20 @@ document.getElementById("pilotLaden").addEventListener("click", async () => {
 });
 
 ladeKinder().catch((fehler) => hinweis(fehler.message));
+
+document.getElementById("pilotAus").addEventListener("click", async () => {
+  const ok = await frage(
+    "Demo-Kürzel ausblenden? Die Berichte bleiben gespeichert. Pilotdaten laden zeigt sie wieder.",
+    "Ausblenden",
+  );
+  if (!ok) return;
+  try {
+    const ergebnis = await api("/seed/pilot/aus", { method: "POST" });
+    hinweis(ergebnis.ausgeblendet
+      ? `${ergebnis.ausgeblendet} Demo-Kürzel ausgeblendet.`
+      : "Keine aktiven Demo-Kürzel.");
+    await ladeKinder();
+  } catch (fehler) {
+    hinweis(fehler.message);
+  }
+});
