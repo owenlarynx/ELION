@@ -12,6 +12,19 @@ ELION ruft `POST {OLLAMA_URL}/api/chat` auf. `OLLAMA_URL` ist die Basisadresse
 | `OLLAMA_MODEL` | `llama3.1` | Modellname |
 | `ELION_PROMPT_PATH` | `prompts/ra_thor_wrap.md` | Prüfvorlage, bei jedem Prüfen neu gelesen |
 
+## Mac
+
+1. Ollama von [https://ollama.com/download](https://ollama.com/download) laden oder mit Homebrew installieren: `brew install ollama`.
+2. Das Modell laden:
+
+```bash
+ollama pull llama3.1
+ollama list
+```
+
+3. ELION im Projektordner starten (siehe README, Abschnitt Mac) und einen Bericht prüfen.
+   Die Oberfläche spricht `http://localhost:11434` an.
+
 ## Windows
 
 1. Den Installer von [https://ollama.com/download](https://ollama.com/download) laden und ausführen.
@@ -76,15 +89,8 @@ Die Prüfanweisung steht in `prompts/ra_thor_wrap.md`, nicht im Python-Code.
 (`ampel`, `umformulierungen`, `hinweise`, `kurzbegruendung`, `verbesserte_fassung`).
 Standardmodell ist `llama3.1`. Ein größeres Modell wie `qwen2.5:14b` oder `llama3.1:70b` formuliert auf Deutsch sicherer, wenn die Hardware das trägt. Der Name steht in `OLLAMA_MODEL`.
 
-Den späteren Ra-Thor-Wrap-Text zwischen diese beiden Zeilen setzen:
-
-```text
-<<<RA_THOR_WRAP>>>
-<<<ENDE_RA_THOR_WRAP>>>
-```
-
-Solange dort nur der HTML-Kommentar steht, geht er nicht an das Modell.
-Nach dem Speichern gilt der neue Text beim nächsten Klick auf „Prüfen“, ohne Neustart.
+Der Text zwischen `<<<RA_THOR_WRAP>>>` und `<<<ENDE_RA_THOR_WRAP>>>` geht bei jeder Prüfung mit. Die Markierungen selbst nicht.
+Nach dem Speichern gilt eine geänderte Datei beim nächsten Klick auf „Prüfung starten“, ohne Neustart.
 Liegt die Datei woanders:
 
 ```bash

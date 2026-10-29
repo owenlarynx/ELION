@@ -68,6 +68,7 @@ class WochenKind(BaseModel):
     id: int
     vorname: str
     nachname: Optional[str]
+    paragraph: Optional[str] = None
     tage: List[WochenTag]
 
 
@@ -253,6 +254,7 @@ def wochenuebersicht(von: Optional[date] = None, db: Session = Depends(get_db)):
                 id=kind.id,
                 vorname=kind.vorname,
                 nachname=kind.nachname,
+                paragraph=kind.paragraph,
                 tage=tag_liste,
             )
         )
