@@ -34,3 +34,6 @@ def test_monat_rahmt_kalender_und_markiert_aussen(client, ollama):
 
 def test_monat_ungueltig(client):
     assert client.get("/tagesberichte/monat", params={"jahr": 2026, "monat": 13}).status_code == 422
+    zahl = client.get("/tagesberichte/monat", params={"jahr": "nein", "monat": 10})
+    assert zahl.status_code == 422
+    assert zahl.json()["detail"] == "Die Eingabe ist unvollständig oder ungültig. Bitte die Angaben prüfen."

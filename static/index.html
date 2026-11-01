@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ELION – Heute</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>
+    try {
+      var thema = localStorage.getItem("elion-thema");
+      if (thema && thema !== "aktuell") document.documentElement.setAttribute("data-thema", thema);
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bereich-arbeit">
@@ -21,6 +27,14 @@
       <a href="#woche" data-ansicht="woche">Woche</a>
       <a href="#monat" data-ansicht="monat">Monat</a>
     </nav>
+    <label class="thema-wahl">Darstellung
+      <select id="themaWahl" aria-label="Darstellung">
+        <option value="aktuell">Aktuell</option>
+        <option value="luna">Windows XP Luna</option>
+        <option value="modern">Modern Soft</option>
+        <option value="linux">Linux dunkel</option>
+      </select>
+    </label>
     <a class="nav-verwaltung" href="/verwaltung.html">Verwaltung</a>
   </header>
   <div class="ollama-leiste" id="ollamaLeiste">
@@ -147,19 +161,31 @@
         <div>
           <p class="kicker">Tagesarbeit</p>
           <h1>Monat</h1>
-          <p class="hilfe">Dieselben Felder wie in der Woche: Früh und Spät vorn, Mittel und Nacht daneben. Tage außerhalb des Monats sind blasser.</p>
+          <p class="hilfe">Jedes Kind eine Zeile, jeder Tag eine Spalte. Früh und Spät sind die großen Felder, Nacht steht kleiner darunter. Ein Feld öffnet genau diese Schicht. Die Ampel gilt der Dokumentation, nicht dem Kind.</p>
         </div>
       </div>
       <p class="hinweis" id="monatStatus" role="status"></p>
-      <div class="wochenleiste">
-        <button type="button" class="sekundaer" id="monatZurueck">Vorheriger Monat</button>
-        <div class="wochenmitte">
-          <strong id="monatsLabel"></strong>
-          <button type="button" class="textlink" id="monatDieser">Dieser Monat</button>
-        </div>
-        <button type="button" class="sekundaer" id="monatVor">Nächster Monat</button>
+      <div class="monatsnav" aria-label="Monat wählen">
+        <button type="button" class="sekundaer monatspfeil" id="monatZurueck" aria-label="Vorheriger Monat"><span aria-hidden="true">‹</span></button>
+        <label class="wahlfeld">Monat
+          <select id="monatWahl" aria-label="Monat"></select>
+        </label>
+        <label class="wahlfeld">Jahr
+          <select id="jahrWahl" aria-label="Jahr"></select>
+        </label>
+        <button type="button" class="sekundaer monatspfeil" id="monatVor" aria-label="Nächster Monat"><span aria-hidden="true">›</span></button>
+        <button type="button" class="sekundaer" id="monatHeute">Heute</button>
+        <strong id="monatsLabel" class="monatstitel"></strong>
       </div>
       <div id="monatsRahmen"></div>
+      <p class="legende">
+        <span><i class="punkt gruen" aria-hidden="true"></i> Grün</span>
+        <span><i class="punkt gelb" aria-hidden="true"></i> Gelb</span>
+        <span><i class="punkt rot" aria-hidden="true"></i> Rot</span>
+        <span><i class="punkt keine" aria-hidden="true"></i> geprüft, ohne Ampel</span>
+        <span><i class="punkt offen" aria-hidden="true"></i> offen</span>
+        <span>Früh und Spät groß, Nacht kleiner. Mittel nur, wenn ein Eintrag vorliegt.</span>
+      </p>
     </section>
   </main>
 

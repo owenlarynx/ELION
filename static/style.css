@@ -28,6 +28,32 @@
   --radius: 18px;
   --schrift: "Segoe UI", "Avenir Next", "Helvetica Neue", sans-serif;
   --marke: "Iowan Old Style", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --kopf: rgba(251, 248, 243, 0.94);
+  --kopf-verwaltung: rgba(247, 241, 230, 0.96);
+  --verwaltung-linie: #c4a574;
+  --leiste: #f7f3ea;
+  --heute-kopf: #e7f2ef;
+  --fokus-bg: #fff;
+  --pruef-gruen: #f7fbf8;
+  --pruef-gelb: #fbf8f1;
+  --pruef-rot: #fbf7f6;
+  --ruhig-rand: #cfc6b8;
+  --platzhalter-bg: #f3e2b0;
+  --platzhalter-tinte: #6b5420;
+  --del-bg: #f3e0d6;
+  --ins-bg: #e3f0ea;
+  --auswahl: #d5ebe4;
+  --editor-auswahl: rgba(47, 111, 102, 0.2);
+  --fokus-ring: rgba(47, 111, 102, 0.15);
+  --hover-wash: rgba(47, 111, 102, 0.06);
+  --keine-rand: #b7afa3;
+  --offen-rand: #d5cdc1;
+  --keine-punkt: #cfc8bd;
+  --leer-rand: #b7b0a4;
+  --leise-hover-bg: #fbf7f6;
+  --leise-hover-rand: #ead8d4;
+  --backdrop: rgba(36, 49, 44, 0.28);
+  --dialog-schatten: 0 24px 60px -28px rgba(36, 49, 44, 0.45);
 }
 
 * { box-sizing: border-box; }
@@ -43,7 +69,7 @@ body {
   font-size: 16.5px;
 }
 
-::selection { background: #d5ebe4; color: var(--tinte); }
+::selection { background: var(--auswahl); color: var(--tinte); }
 
 .kopf {
   position: sticky;
@@ -54,14 +80,14 @@ body {
   gap: 18px;
   flex-wrap: wrap;
   padding: 14px 22px;
-  background: rgba(251, 248, 243, 0.94);
+  background: var(--kopf);
   border-bottom: 3px solid var(--akzent);
   backdrop-filter: blur(8px);
 }
 
 .bereich-verwaltung .kopf {
-  background: rgba(247, 241, 230, 0.96);
-  border-bottom-color: #c4a574;
+  background: var(--kopf-verwaltung);
+  border-bottom-color: var(--verwaltung-linie);
 }
 
 .marke {
@@ -243,8 +269,8 @@ h3 { font-size: 1rem; margin: 18px 0 8px; font-weight: 700; }
 .schichtzeile.ist-gruen { border-left-color: var(--gruen); }
 .schichtzeile.ist-gelb { border-left-color: var(--gelb); }
 .schichtzeile.ist-rot { border-left-color: var(--rot); }
-.schichtzeile.ist-keine { border-left-color: #b7afa3; }
-.schichtzeile.ist-offen { border-left-color: #d5cdc1; }
+.schichtzeile.ist-keine { border-left-color: var(--keine-rand); }
+.schichtzeile.ist-offen { border-left-color: var(--offen-rand); }
 
 .nameknopf {
   display: flex;
@@ -341,8 +367,8 @@ button.schichtwahl.aktiv { border-color: var(--akzent); background: var(--akzent
 .punkt.gruen { background: var(--gruen); }
 .punkt.gelb { background: var(--gelb); }
 .punkt.rot { background: var(--rot); }
-.punkt.keine { background: #cfc8bd; }
-.punkt.offen { background: transparent; border: 2px dashed #b7b0a4; }
+.punkt.keine { background: var(--keine-punkt); }
+.punkt.offen { background: transparent; border: 2px dashed var(--leer-rand); }
 
 .legende {
   display: flex;
@@ -430,7 +456,7 @@ textarea { min-height: 96px; resize: vertical; }
   background: var(--feld);
 }
 
-.editor-rahmen:focus-within { border-color: var(--akzent); box-shadow: 0 0 0 3px rgba(47, 111, 102, 0.15); }
+.editor-rahmen:focus-within { border-color: var(--akzent); box-shadow: 0 0 0 3px var(--fokus-ring); }
 
 .editor-rahmen textarea,
 .editor-spiegel {
@@ -459,7 +485,7 @@ textarea { min-height: 96px; resize: vertical; }
 }
 
 #rohtext::placeholder { color: var(--leis); }
-#rohtext::selection { background: rgba(47, 111, 102, 0.2); color: transparent; }
+#rohtext::selection { background: var(--editor-auswahl); color: transparent; }
 
 .editor-spiegel {
   position: absolute;
@@ -471,8 +497,8 @@ textarea { min-height: 96px; resize: vertical; }
 }
 
 mark.platzhalter {
-  background: #f3e2b0;
-  color: #6b5420;
+  background: var(--platzhalter-bg);
+  color: var(--platzhalter-tinte);
   border-radius: 3px;
   padding: 0 2px;
 }
@@ -534,8 +560,8 @@ button.leise {
 
 button.leise:hover {
   color: var(--rot-tinte);
-  border-color: #ead8d4;
-  background: #fbf7f6;
+  border-color: var(--leise-hover-rand);
+  background: var(--leise-hover-bg);
 }
 
 button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -553,10 +579,10 @@ button.textlink:disabled { opacity: 1; color: var(--leis); cursor: default; }
   background: var(--feld);
 }
 
-.pruefpanel.gruen { border-left-color: var(--gruen); background: #f7fbf8; }
-.pruefpanel.gelb { border-left-color: var(--gelb); background: #fbf8f1; }
-.pruefpanel.rot { border-left-color: var(--rot); background: #fbf7f6; }
-.pruefpanel.ruhig, .pruefpanel.keine { border-left-color: #cfc6b8; }
+.pruefpanel.gruen { border-left-color: var(--gruen); background: var(--pruef-gruen); }
+.pruefpanel.gelb { border-left-color: var(--gelb); background: var(--pruef-gelb); }
+.pruefpanel.rot { border-left-color: var(--rot); background: var(--pruef-rot); }
+.pruefpanel.ruhig, .pruefpanel.keine { border-left-color: var(--ruhig-rand); }
 
 .ampelzeile { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
 
@@ -578,8 +604,8 @@ button.textlink:disabled { opacity: 1; color: var(--leis); cursor: default; }
   min-height: 4.5rem;
 }
 
-.vergleichtext del { background: #f3e0d6; text-decoration: none; }
-.vergleichtext ins { background: #e3f0ea; text-decoration: none; }
+.vergleichtext del { background: var(--del-bg); text-decoration: none; }
+.vergleichtext ins { background: var(--ins-bg); text-decoration: none; }
 .label { display: block; color: var(--leis); font-size: 0.82rem; font-weight: 700; margin-bottom: 4px; }
 
 .anpassen {
@@ -656,7 +682,7 @@ table.woche td:first-child {
   min-width: 7.5rem;
 }
 
-table.woche th.heute { background: #e7f2ef; color: var(--akzent-tief); }
+table.woche th.heute { background: var(--heute-kopf); color: var(--akzent-tief); }
 table.woche td.heute { background: var(--akzent-wash); }
 
 button.link {
@@ -682,7 +708,7 @@ button.tagknopf {
   border-radius: 12px;
 }
 
-button.tagknopf:hover { background: rgba(47, 111, 102, 0.06); }
+button.tagknopf:hover { background: var(--hover-wash); }
 
 .wochenzelle { display: grid; gap: 4px; min-width: 7.4rem; }
 .wochenfokus, .wocheneben { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -703,7 +729,7 @@ button.fokusknopf, button.nebenknopf {
   font-size: 0.78rem;
   line-height: 1.2;
 }
-button.fokusknopf { min-height: 58px; font-weight: 700; background: #fff; }
+button.fokusknopf { min-height: 58px; font-weight: 700; background: var(--fokus-bg); }
 button.nebenknopf { color: var(--leis); font-weight: 600; }
 button.fokusknopf:hover, button.nebenknopf:hover { border-color: var(--akzent); }
 table.woche td.fremd, table.woche th.fremd { opacity: 0.45; }
@@ -714,7 +740,7 @@ table.woche td.fremd, table.woche th.fremd { opacity: 0.45; }
   gap: 10px 16px;
   align-items: flex-end;
   padding: 8px 22px 14px;
-  background: #f7f3ea;
+  background: var(--leiste);
   border-bottom: 1px solid var(--linie);
 }
 .ollama-leiste p { margin: 0 0 8px; color: var(--tinte-weich); flex: 1 1 18rem; }
@@ -793,10 +819,10 @@ dialog {
   background: var(--karte);
   color: var(--tinte);
   max-width: min(28rem, calc(100vw - 32px));
-  box-shadow: 0 24px 60px -28px rgba(36, 49, 44, 0.45);
+  box-shadow: var(--dialog-schatten);
 }
 
-dialog::backdrop { background: rgba(36, 49, 44, 0.28); }
+dialog::backdrop { background: var(--backdrop); }
 dialog p { margin: 0 0 16px; }
 dialog .aktionen { justify-content: flex-end; }
 dialog #dialogOk { order: 2; }
@@ -824,3 +850,464 @@ dialog #dialogAbbrechen { order: 1; }
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
 }
+
+.thema-wahl {
+  margin: 0;
+  min-width: 11.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--leis);
+}
+
+.thema-wahl select {
+  margin-top: 2px;
+  padding: 6px 10px;
+  min-height: 40px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+body.ist-monat main { max-width: 1680px; padding-left: 14px; padding-right: 14px; }
+
+.monatsnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: flex-end;
+  margin: 0 0 12px;
+}
+
+.wahlfeld {
+  margin: 0;
+  min-width: 9.5rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--leis);
+}
+
+.wahlfeld select { margin-top: 2px; min-height: 44px; }
+
+button.monatspfeil {
+  min-width: 46px;
+  padding: 6px 12px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.monatstitel {
+  margin: 0 0 8px auto;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+
+#monatsRahmen.laedt { opacity: 0.55; }
+
+.monatsrahmen {
+  position: relative;
+  overflow: auto;
+  max-height: min(72vh, 780px);
+  background: var(--karte);
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  box-shadow: var(--schatten);
+}
+
+table.monat {
+  width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--karte);
+}
+
+table.monat th,
+table.monat td {
+  border-right: 1px solid var(--linie);
+  border-bottom: 1px solid var(--linie);
+  padding: 3px;
+  text-align: center;
+  vertical-align: middle;
+  background: var(--karte);
+}
+
+table.monat thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--karte);
+  padding: 6px 3px 5px;
+}
+
+table.monat .namekopf,
+table.monat .kindname {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 4.5rem;
+  min-width: 4.5rem;
+  max-width: 4.5rem;
+  text-align: left;
+  background: var(--karte);
+}
+
+table.monat .schichtkopf,
+table.monat .schichtname {
+  position: sticky;
+  left: 4.5rem;
+  z-index: 3;
+  width: 4.15rem;
+  min-width: 4.15rem;
+  max-width: 4.15rem;
+  text-align: left;
+  padding-left: 8px;
+  background: var(--karte);
+}
+
+table.monat thead .namekopf,
+table.monat thead .schichtkopf { z-index: 4; }
+
+table.monat .tagkopf { min-width: 2.7rem; line-height: 1.15; }
+table.monat .wotag {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 650;
+  color: var(--leis);
+}
+table.monat .tagzahl {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--tinte);
+}
+
+table.monat tr.kindanfang th,
+table.monat tr.kindanfang td { border-top: 2px solid var(--linie); }
+
+table.monat tr.gruppe-b th,
+table.monat tr.gruppe-b td { background: var(--papier); }
+
+table.monat tr.hauptzeile .schichtname {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--tinte);
+}
+
+table.monat tr.nebenzeile .schichtname {
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--leis);
+}
+
+table.monat .kindname .link {
+  min-height: 0;
+  padding: 6px 4px;
+  font-size: 1.05rem;
+}
+
+table.monat th.tagkopf.ruhetag,
+table.monat td.ruhetag { background: var(--papier-tief); }
+
+table.monat th.tagkopf.heute,
+table.monat td.heute { background: var(--heute-kopf); }
+
+table.monat th.tagkopf.heute .tagzahl,
+table.monat th.tagkopf.heute .wotag { color: var(--akzent-tief); }
+
+button.monatsfeld {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-width: 1.85rem;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 7px;
+  border: 1px solid var(--linie);
+  background: var(--feld);
+  color: var(--tinte-weich);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  box-shadow: inset 3px 0 0 var(--akzent);
+}
+
+button.monatsfeld.neben {
+  min-height: 20px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+button.monatsfeld.gruen {
+  background: var(--gruen-bg);
+  color: var(--gruen-tinte);
+  border-color: var(--gruen);
+  box-shadow: inset 3px 0 0 var(--gruen);
+}
+button.monatsfeld.gelb {
+  background: var(--gelb-bg);
+  color: var(--gelb-tinte);
+  border-color: var(--gelb);
+  box-shadow: inset 3px 0 0 var(--gelb);
+}
+button.monatsfeld.rot {
+  background: var(--rot-bg);
+  color: var(--rot-tinte);
+  border-color: var(--rot);
+  box-shadow: inset 3px 0 0 var(--rot);
+}
+button.monatsfeld.keine {
+  background: var(--papier-tief);
+  color: var(--tinte);
+  border-color: var(--keine-punkt);
+  box-shadow: inset 3px 0 0 var(--keine-punkt);
+}
+button.monatsfeld.offen {
+  background: transparent;
+  color: var(--leis);
+  border-style: dashed;
+  font-weight: 650;
+  box-shadow: none;
+}
+button.monatsfeld.neben.gruen,
+button.monatsfeld.neben.gelb,
+button.monatsfeld.neben.rot,
+button.monatsfeld.neben.keine { box-shadow: none; }
+button.monatsfeld.neben.offen { opacity: 0.7; }
+button.monatsfeld:hover { border-color: var(--akzent); }
+
+html[data-thema="luna"] {
+  color-scheme: light;
+  --papier: #ece9d8;
+  --papier-tief: #d8d4c4;
+  --karte: #ffffff;
+  --feld: #ffffff;
+  --tinte: #102030;
+  --tinte-weich: #1c2c40;
+  --leis: #3e4a58;
+  --linie: #aca899;
+  --akzent: #0054e3;
+  --akzent-tief: #003c74;
+  --akzent-hell: #d6e6fb;
+  --akzent-wash: #e8f1fc;
+  --sand: #e7f0fb;
+  --sand-linie: #7aa2d6;
+  --sand-tinte: #003c74;
+  --gruen: #1f7a34;
+  --gruen-bg: #e3f5e6;
+  --gruen-tinte: #0e4d1d;
+  --gelb: #b8860b;
+  --gelb-bg: #fff3c4;
+  --gelb-tinte: #6a4e00;
+  --rot: #c4371a;
+  --rot-bg: #fde3dc;
+  --rot-tinte: #8a2412;
+  --schatten: 1px 1px 0 rgba(255, 255, 255, 0.8) inset, 2px 2px 0 rgba(0, 0, 0, 0.08);
+  --radius: 6px;
+  --schrift: Tahoma, "Segoe UI", sans-serif;
+  --marke: Tahoma, "Segoe UI", sans-serif;
+  --kopf: #0054e3;
+  --kopf-verwaltung: #0054e3;
+  --verwaltung-linie: #003c74;
+  --leiste: #ece9d8;
+  --heute-kopf: #d6e6fb;
+  --fokus-bg: #ffffff;
+  --fokus-ring: rgba(0, 84, 227, 0.25);
+  --auswahl: #b5d3f7;
+  --editor-auswahl: rgba(0, 84, 227, 0.22);
+  --hover-wash: rgba(0, 84, 227, 0.08);
+}
+
+html[data-thema="luna"] body,
+html[data-thema="luna"] button,
+html[data-thema="luna"] input,
+html[data-thema="luna"] select,
+html[data-thema="luna"] textarea { font-family: Tahoma, "Segoe UI", sans-serif; }
+
+html[data-thema="luna"] .kopf,
+html[data-thema="luna"] .bereich-verwaltung .kopf {
+  background: linear-gradient(#3a96f5 0%, #0058e6 12%, #0054e3 55%, #0046c7 100%);
+  color: #fff;
+  border-bottom: 2px solid #003c74;
+  border-radius: 0 0 8px 8px;
+}
+
+html[data-thema="luna"] .marke-unter,
+html[data-thema="luna"] .hauptnav a,
+html[data-thema="luna"] .thema-wahl,
+html[data-thema="luna"] .nav-verwaltung { color: #fff; }
+
+html[data-thema="luna"] .marke-zeichen { background: #fff; }
+html[data-thema="luna"] .hauptnav { background: rgba(255, 255, 255, 0.18); }
+html[data-thema="luna"] .hauptnav a.aktiv {
+  background: #fff;
+  color: #003c74;
+  box-shadow: none;
+}
+html[data-thema="luna"] .nav-verwaltung { border-color: rgba(255, 255, 255, 0.75); background: transparent; }
+html[data-thema="luna"] .nav-verwaltung.aktiv,
+html[data-thema="luna"] .bereich-verwaltung .nav-verwaltung {
+  background: #fff;
+  color: #003c74;
+  border-color: #fff;
+}
+html[data-thema="luna"] .thema-wahl select { color: #102030; background: #fff; }
+
+html[data-thema="luna"] button,
+html[data-thema="luna"] .button {
+  border-radius: 3px;
+  box-shadow: inset 1px 1px 0 #fff;
+}
+html[data-thema="luna"] button.link,
+html[data-thema="luna"] button.textlink,
+html[data-thema="luna"] button.leise,
+html[data-thema="luna"] button.nameknopf,
+html[data-thema="luna"] button.tagknopf {
+  box-shadow: none;
+  background: transparent;
+}
+html[data-thema="luna"] button:not(.sekundaer):not(.textlink):not(.leise):not(.link):not(.monatsfeld):not(.fokusknopf):not(.nebenknopf):not(.chip):not(.schichtwahl):not(.nameknopf):not(.tagknopf),
+html[data-thema="luna"] a.button:not(.sekundaer) {
+  background: linear-gradient(#4aa1f8, #0054e3);
+  border-color: #003c74;
+  color: #fff;
+}
+html[data-thema="luna"] button.sekundaer,
+html[data-thema="luna"] a.button.sekundaer {
+  background: linear-gradient(#fff, #ece9d8);
+  color: #003c74;
+  border-color: #003c74;
+}
+html[data-thema="luna"] .ollama-leiste { border-bottom-color: #aca899; }
+
+html[data-thema="modern"] {
+  color-scheme: light;
+  --papier: #f3f1fb;
+  --papier-tief: #e6e3f4;
+  --karte: #fffcff;
+  --feld: #ffffff;
+  --tinte: #2c2842;
+  --tinte-weich: #433e5c;
+  --leis: #6d6884;
+  --linie: #e2dcf2;
+  --akzent: #6a62c5;
+  --akzent-tief: #4c458f;
+  --akzent-hell: #ece9fb;
+  --akzent-wash: #f6f4fd;
+  --sand: #f3e9f8;
+  --sand-linie: #e0d2ee;
+  --sand-tinte: #5c4d78;
+  --gruen: #3b9a6c;
+  --gruen-bg: #e7f6ee;
+  --gruen-tinte: #1d6443;
+  --gelb: #d09a32;
+  --gelb-bg: #fff4dc;
+  --gelb-tinte: #7a5412;
+  --rot: #d16f6f;
+  --rot-bg: #fdeeee;
+  --rot-tinte: #8c3f3f;
+  --schatten: 0 18px 40px -28px rgba(88, 72, 140, 0.55);
+  --radius: 22px;
+  --schrift: "Avenir Next", "Segoe UI", "Gill Sans", sans-serif;
+  --marke: "Avenir Next", "Segoe UI", sans-serif;
+  --kopf: rgba(255, 252, 255, 0.92);
+  --kopf-verwaltung: rgba(255, 252, 255, 0.92);
+  --verwaltung-linie: #c9b6e4;
+  --leiste: #f7f4fc;
+  --heute-kopf: #ece8fb;
+  --fokus-ring: rgba(106, 98, 197, 0.22);
+  --auswahl: #ddd6f7;
+  --editor-auswahl: rgba(106, 98, 197, 0.2);
+  --hover-wash: rgba(106, 98, 197, 0.08);
+}
+
+html[data-thema="modern"] body {
+  background: linear-gradient(180deg, #f7f5fc 0%, #eef3fa 48%, #f6f3fb 100%);
+}
+html[data-thema="modern"] .kopf,
+html[data-thema="modern"] .bereich-verwaltung .kopf {
+  border-bottom: 0;
+  box-shadow: 0 10px 28px -22px rgba(80, 70, 130, 0.8);
+}
+html[data-thema="modern"] .hauptnav a.aktiv { box-shadow: 0 8px 18px -14px rgba(80, 70, 130, 0.9); }
+html[data-thema="modern"] button.monatsfeld,
+html[data-thema="modern"] .karte,
+html[data-thema="modern"] .wochenrahmen,
+html[data-thema="modern"] .monatsrahmen { border-radius: 16px; }
+html[data-thema="modern"] button.monatsfeld { border-radius: 9px; }
+
+html[data-thema="linux"] {
+  color-scheme: dark;
+  --papier: #1e1e1e;
+  --papier-tief: #2a2a2a;
+  --karte: #2c2c2c;
+  --feld: #333333;
+  --tinte: #f2f2f2;
+  --tinte-weich: #e4e4e4;
+  --leis: #b9b9b9;
+  --linie: #464646;
+  --akzent: #3584e4;
+  --akzent-tief: #9ac6f5;
+  --akzent-hell: #243246;
+  --akzent-wash: #1b2836;
+  --sand: #2e2c2a;
+  --sand-linie: #5c5348;
+  --sand-tinte: #eadcc8;
+  --gruen: #57d18b;
+  --gruen-bg: #1a3a28;
+  --gruen-tinte: #c8f5da;
+  --gelb: #f0c85a;
+  --gelb-bg: #3d341c;
+  --gelb-tinte: #fbe7b0;
+  --rot: #f07171;
+  --rot-bg: #3d2222;
+  --rot-tinte: #ffc9c9;
+  --schatten: 0 0 0 1px rgba(0, 0, 0, 0.35);
+  --radius: 10px;
+  --schrift: Cantarell, "Noto Sans", "Segoe UI", sans-serif;
+  --marke: Cantarell, "Noto Sans", "Segoe UI", sans-serif;
+  --kopf: #262626;
+  --kopf-verwaltung: #262626;
+  --verwaltung-linie: #3584e4;
+  --leiste: #242424;
+  --heute-kopf: #243246;
+  --fokus-bg: #303030;
+  --pruef-gruen: #173226;
+  --pruef-gelb: #332d1c;
+  --pruef-rot: #351e1e;
+  --ruhig-rand: #666666;
+  --platzhalter-bg: #5a4820;
+  --platzhalter-tinte: #ffe7a8;
+  --del-bg: #5a3030;
+  --ins-bg: #1d4632;
+  --auswahl: #35506e;
+  --editor-auswahl: rgba(98, 160, 234, 0.35);
+  --fokus-ring: rgba(98, 160, 234, 0.35);
+  --hover-wash: rgba(98, 160, 234, 0.12);
+  --keine-rand: #6a6a6a;
+  --offen-rand: #555555;
+  --keine-punkt: #8a8a8a;
+  --leer-rand: #8d8d8d;
+  --leise-hover-bg: #3a2424;
+  --leise-hover-rand: #7a4545;
+  --backdrop: rgba(0, 0, 0, 0.62);
+  --dialog-schatten: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+html[data-thema="linux"] .kopf,
+html[data-thema="linux"] .bereich-verwaltung .kopf {
+  background: #262626;
+  border-bottom-color: var(--akzent);
+}
+html[data-thema="linux"] .marke-zeichen { background: #1a1a1a; }
+html[data-thema="linux"] button.monatsfeld.offen { color: #cfcfcf; }
