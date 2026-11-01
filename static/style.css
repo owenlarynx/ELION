@@ -435,6 +435,63 @@ button.schichtwahl.voll { grid-column: 1 / -1; }
 
 label { display: block; font-weight: 650; margin: 12px 0; }
 
+.feldkopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.feldkopf label { margin: 0; }
+
+button.diktat-knopf {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  min-height: 40px;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.diktat-symbol {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+  display: block;
+}
+
+.diktat-stopp { display: none; }
+
+button.diktat-knopf.hoert {
+  background: var(--rot-bg);
+  color: var(--rot-tinte);
+  border-color: var(--rot);
+  box-shadow: inset 0 0 0 1px var(--rot);
+}
+
+button.diktat-knopf.hoert .diktat-mic { display: none; }
+button.diktat-knopf.hoert .diktat-stopp { display: block; }
+button.diktat-knopf.hoert .diktat-symbol { animation: diktat-puls 1.1s ease-in-out infinite; }
+
+@keyframes diktat-puls {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.diktat-status {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  color: var(--leis);
+}
+
+.diktat-status.hoert { color: var(--rot-tinte); font-weight: 650; }
+.diktat-status.fehler { color: var(--rot-tinte); }
+
 input, select, textarea {
   width: 100%;
   margin-top: 4px;
@@ -849,6 +906,7 @@ dialog #dialogAbbrechen { order: 1; }
 
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
+  button.diktat-knopf.hoert .diktat-symbol { animation: none; }
 }
 
 .thema-wahl {
@@ -1311,3 +1369,12 @@ html[data-thema="linux"] .bereich-verwaltung .kopf {
 }
 html[data-thema="linux"] .marke-zeichen { background: #1a1a1a; }
 html[data-thema="linux"] button.monatsfeld.offen { color: #cfcfcf; }
+
+html[data-thema="luna"] button.diktat-knopf.hoert,
+html[data-thema="modern"] button.diktat-knopf.hoert,
+html[data-thema="linux"] button.diktat-knopf.hoert {
+  background: var(--rot-bg);
+  color: var(--rot-tinte);
+  border-color: var(--rot);
+  box-shadow: inset 0 0 0 1px var(--rot);
+}

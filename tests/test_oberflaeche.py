@@ -28,7 +28,7 @@ FREMDE_MARKEN = ("Kuuna", "KUUNA", "Klient", "Klienten")
 def _oberflaeche() -> str:
     return "\n".join(
         (STATIC / name).read_text(encoding="utf-8")
-        for name in ("index.html", "arbeit.js", "verwaltung.html", "verwaltung.js", "style.css", "common.js")
+        for name in ("index.html", "arbeit.js", "diktat.js", "verwaltung.html", "verwaltung.js", "style.css", "common.js")
     )
 
 

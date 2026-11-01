@@ -15,10 +15,12 @@ let herkunft = "heute";
 let aktuelleSchicht = "frueh";
 let naechsteSchicht = null;
 let verbesserteFassung = "";
+let formularAktion = false;
 
 const STUNDE = { frueh: "07", mittel: "13", spaet: "18", nacht: "22" };
 
 function zeige(name) {
+  if (name !== "bericht" && typeof diktatAbbrechen === "function") diktatAbbrechen();
   document.body.classList.toggle("ist-monat", name === "monat");
   for (const ansicht of ["heute", "bericht", "woche", "monat"]) {
     document.getElementById("ansicht-" + ansicht).hidden = ansicht !== name;
@@ -203,6 +205,7 @@ function formularSperren() {
   const pruefen = document.getElementById("pruefen");
   const freigeben = document.getElementById("freigeben");
   document.getElementById("rohtext").readOnly = gesperrt;
+  if (typeof diktatSperren === "function") diktatSperren(gesperrt);
   speichern.disabled = gesperrt;
   speichern.textContent = nachtragModus ? "Nachtrag speichern" : "Speichern Entwurf";
   pruefen.disabled = !berichtId || freigegeben;
@@ -436,6 +439,7 @@ async function ladeVerlauf(id) {
 }
 
 function slotInFormular(schicht) {
+  if (typeof diktatAbbrechen === "function") diktatAbbrechen();
   aktuelleSchicht = schicht;
   nachtragModus = false;
   document.getElementById("nachtragVon").value = "";
@@ -552,6 +556,18 @@ async function ungespeichertVerwerfen(text) {
 }
 
 async function speichern() {
+  if (formularAktion) return false;
+  formularAktion = true;
+  try {
+    return await speichernJetzt();
+  } finally {
+    formularAktion = false;
+  }
+}
+
+async function speichernJetzt() {
+  const stopp = typeof diktatStopp === "function" ? diktatStopp() : null;
+  if (stopp) await stopp;
   const rohtext = document.getElementById("rohtext").value.trim();
   if (!rohtext) {
     setzeHinweis("Bitte einen Text eingeben.");
@@ -604,6 +620,18 @@ async function speichern() {
 }
 
 async function pruefen() {
+  if (formularAktion) return;
+  formularAktion = true;
+  try {
+    await pruefenJetzt();
+  } finally {
+    formularAktion = false;
+  }
+}
+
+async function pruefenJetzt() {
+  const stopp = typeof diktatStopp === "function" ? diktatStopp() : null;
+  if (stopp) await stopp;
   if (!berichtId) {
     setzeHinweis("Bitte den Bericht zuerst speichern.");
     return;
@@ -625,6 +653,18 @@ async function pruefen() {
 }
 
 async function freigeben() {
+  if (formularAktion) return;
+  formularAktion = true;
+  try {
+    await freigebenJetzt();
+  } finally {
+    formularAktion = false;
+  }
+}
+
+async function freigebenJetzt() {
+  const stopp = typeof diktatStopp === "function" ? diktatStopp() : null;
+  if (stopp) await stopp;
   if (!berichtId) {
     setzeHinweis("Bitte den Bericht zuerst speichern.");
     return;

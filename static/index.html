@@ -97,7 +97,21 @@
           </div>
           <div id="schichtLeiste" class="schichtleiste" role="group" aria-label="Schichten dieses Tages"></div>
           <p class="hilfe" id="schichtHilfe">Jede Schicht hat einen eigenen Bericht und eine eigene Ampel. In der Übersicht gilt die schlechteste Ampel des Tages.</p>
-          <label for="rohtext">Berichtstext</label>
+          <div class="feldkopf">
+            <label for="rohtext">Berichtstext</label>
+            <button type="button" id="diktieren" class="sekundaer diktat-knopf" aria-pressed="false" aria-controls="rohtext" aria-label="Diktieren starten" title="Berichtstext auf Deutsch diktieren">
+              <svg class="diktat-symbol diktat-mic" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/>
+              </svg>
+              <svg class="diktat-symbol diktat-stopp" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M6 6h12v12H6z"/>
+              </svg>
+              <span id="diktatLabel">Diktieren</span>
+            </button>
+          </div>
+          <p id="diktatZeile" class="diktat-status" hidden>
+            <span id="diktatStatus" role="status" aria-live="polite"></span><span id="diktatZwischen" aria-hidden="true"></span>
+          </p>
           <div class="editor-rahmen">
             <pre id="rohtextSpiegel" class="editor-spiegel" aria-hidden="true"></pre>
             <textarea id="rohtext" placeholder="Beobachtbar beschreiben: Verlauf, Essen, Schlaf, Kontakte, besondere Vorkommnisse. Medikation nur, wenn sie hinterlegt ist."></textarea>
@@ -200,6 +214,7 @@
   </dialog>
 
   <script src="/common.js"></script>
+  <script src="/diktat.js"></script>
   <script src="/arbeit.js"></script>
 </body>
 </html>
