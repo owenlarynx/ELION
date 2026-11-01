@@ -28,7 +28,7 @@ FREMDE_MARKEN = ("Kuuna", "KUUNA", "Klient", "Klienten")
 def _oberflaeche() -> str:
     return "\n".join(
         (STATIC / name).read_text(encoding="utf-8")
-        for name in ("index.html", "arbeit.js", "verwaltung.html", "verwaltung.js", "style.css")
+        for name in ("index.html", "arbeit.js", "diktat.js", "verwaltung.html", "verwaltung.js", "style.css", "common.js")
     )
 
 
@@ -36,6 +36,25 @@ def test_oberflaeche_nennt_kernaktionen():
     texte = _oberflaeche()
     for schnipsel in KERNAKTIONEN:
         assert schnipsel in texte
+
+
+def test_monat_und_themen_sind_bedienbar():
+    texte = _oberflaeche()
+    for name in ("Aktuell", "Windows XP Luna", "Modern Soft", "Linux dunkel"):
+        assert name in texte
+    assert "elion-thema" in texte
+    assert 'id="monatWahl"' in texte
+    assert 'id="jahrWahl"' in texte
+    assert 'id="monatHeute">Heute' in texte
+    assert "Vorheriger Monat" in texte
+    assert "Nächster Monat" in texte
+    assert "monatsfeld" in texte
+    assert "nebenzeile" in texte
+    assert "wochenfokus" in texte
+    assert "ELION ist gerade nicht erreichbar" in texte
+    assert 'data-thema="luna"' in texte
+    assert 'data-thema="modern"' in texte
+    assert 'data-thema="linux"' in texte
 
 
 def test_oberflaeche_ohne_fremde_marke():

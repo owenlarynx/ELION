@@ -15,10 +15,13 @@ let herkunft = "heute";
 let aktuelleSchicht = "frueh";
 let naechsteSchicht = null;
 let verbesserteFassung = "";
+let formularAktion = false;
 
 const STUNDE = { frueh: "07", mittel: "13", spaet: "18", nacht: "22" };
 
 function zeige(name) {
+  if (name !== "bericht" && typeof diktatAbbrechen === "function") diktatAbbrechen();
+  document.body.classList.toggle("ist-monat", name === "monat");
   for (const ansicht of ["heute", "bericht", "woche", "monat"]) {
     document.getElementById("ansicht-" + ansicht).hidden = ansicht !== name;
   }
@@ -202,6 +205,7 @@ function formularSperren() {
   const pruefen = document.getElementById("pruefen");
   const freigeben = document.getElementById("freigeben");
   document.getElementById("rohtext").readOnly = gesperrt;
+  if (typeof diktatSperren === "function") diktatSperren(gesperrt);
   speichern.disabled = gesperrt;
   speichern.textContent = nachtragModus ? "Nachtrag speichern" : "Speichern Entwurf";
   pruefen.disabled = !berichtId || freigegeben;
@@ -435,6 +439,7 @@ async function ladeVerlauf(id) {
 }
 
 function slotInFormular(schicht) {
+  if (typeof diktatAbbrechen === "function") diktatAbbrechen();
   aktuelleSchicht = schicht;
   nachtragModus = false;
   document.getElementById("nachtragVon").value = "";
@@ -534,7 +539,7 @@ async function oeffneKind(id, datum, von, schicht) {
     await ladeBericht();
     zeige("bericht");
   } catch (fehler) {
-    const ziel = herkunft === "woche" ? "wocheStatus" : "heuteStatus";
+    const ziel = herkunft === "woche" ? "wocheStatus" : herkunft === "monat" ? "monatStatus" : "heuteStatus";
     document.getElementById(ziel).textContent = fehler.message;
   }
 }
@@ -551,6 +556,18 @@ async function ungespeichertVerwerfen(text) {
 }
 
 async function speichern() {
+  if (formularAktion) return false;
+  formularAktion = true;
+  try {
+    return await speichernJetzt();
+  } finally {
+    formularAktion = false;
+  }
+}
+
+async function speichernJetzt() {
+  const stopp = typeof diktatStopp === "function" ? diktatStopp() : null;
+  if (stopp) await stopp;
   const rohtext = document.getElementById("rohtext").value.trim();
   if (!rohtext) {
     setzeHinweis("Bitte einen Text eingeben.");
@@ -603,6 +620,18 @@ async function speichern() {
 }
 
 async function pruefen() {
+  if (formularAktion) return;
+  formularAktion = true;
+  try {
+    await pruefenJetzt();
+  } finally {
+    formularAktion = false;
+  }
+}
+
+async function pruefenJetzt() {
+  const stopp = typeof diktatStopp === "function" ? diktatStopp() : null;
+  if (stopp) await stopp;
   if (!berichtId) {
     setzeHinweis("Bitte den Bericht zuerst speichern.");
     return;
@@ -624,6 +653,18 @@ async function pruefen() {
 }
 
 async function freigeben() {
+  if (formularAktion) return;
+  formularAktion = true;
+  try {
+    await freigebenJetzt();
+  } finally {
+    formularAktion = false;
+  }
+}
+
+async function freigebenJetzt() {
+  const stopp = typeof diktatStopp === "function" ? diktatStopp() : null;
+  if (stopp) await stopp;
   if (!berichtId) {
     setzeHinweis("Bitte den Bericht zuerst speichern.");
     return;
@@ -911,79 +952,146 @@ if (kindParameter) {
   zeige("heute");
 }
 
+function monatBegrenzen(datum) {
+  let jahr = datum.getFullYear();
+  let monat = datum.getMonth();
+  if (jahr < 2000) return new Date(2000, 0, 1);
+  if (jahr > 2100) return new Date(2100, 11, 1);
+  return new Date(jahr, monat, 1);
+}
+
+function monatsWahlFuellen() {
+  const monatWahl = document.getElementById("monatWahl");
+  const jahrWahl = document.getElementById("jahrWahl");
+  if (!monatWahl.options.length) {
+    const namen = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    monatWahl.innerHTML = namen.map((name, index) => `<option value="${index}">${name}</option>`).join("");
+  }
+  const jahr = monatsStart.getFullYear();
+  const von = Math.max(2000, jahr - 8);
+  const bis = Math.min(2100, Math.max(jahr + 4, von));
+  const jahre = [];
+  for (let wert = Math.min(von, jahr); wert <= Math.max(bis, jahr); wert += 1) jahre.push(wert);
+  const vorhanden = Array.from(jahrWahl.options).map((option) => Number(option.value));
+  if (vorhanden.join(",") !== jahre.join(",")) {
+    jahrWahl.innerHTML = jahre.map((wert) => `<option value="${wert}">${wert}</option>`).join("");
+  }
+  monatWahl.value = String(monatsStart.getMonth());
+  jahrWahl.value = String(jahr);
+  document.getElementById("monatZurueck").disabled = jahr === 2000 && monatsStart.getMonth() === 0;
+  document.getElementById("monatVor").disabled = jahr === 2100 && monatsStart.getMonth() === 11;
+}
+
+function monatsFeld(kind, tag, wert, kurz, neben) {
+  const eintrag = eintragDerSchicht(tag, wert);
+  const vorhanden = Boolean(eintrag);
+  const ampel = vorhanden ? eintrag.ampel : null;
+  const klasse = !vorhanden ? "offen" : (ampel === "gruen" || ampel === "gelb" || ampel === "rot" ? ampel : "keine");
+  const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
+  const datumText = datumAusIso(tag.datum).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+  const stand = vorhanden ? ampelText(ampel) : "offen";
+  const titel = `${name}, ${datumText}, ${kurz}: ${stand}`;
+  const tagDatum = datumAusIso(tag.datum);
+  const ruhe = tagDatum.getDay() === 0 || tagDatum.getDay() === 6;
+  const heute = tag.datum === heuteLokal();
+  const zelle = [heute ? "heute" : "", ruhe ? "ruhetag" : ""].filter(Boolean).join(" ");
+  return `<td class="${zelle}"><button type="button" class="monatsfeld ${klasse}${neben ? " neben" : ""}" data-kind="${kind.id}" data-datum="${escapeHtml(tag.datum)}" data-schicht="${escapeHtml(wert)}" title="${escapeHtml(titel)}" aria-label="${escapeHtml(titel)}"><span class="monatskuerzel">${escapeHtml(ampelKuerzel(ampel, vorhanden))}</span></button></td>`;
+}
+
+function monatsSchichten(tage) {
+  const schichten = [
+    ["frueh", "Früh", false],
+    ["spaet", "Spät", false],
+    ["nacht", "Nacht", true],
+  ];
+  if (tage.some((tag) => eintragDerSchicht(tag, "mittel"))) schichten.push(["mittel", "Mittel", true]);
+  if (tage.some((tag) => eintragDerSchicht(tag, ""))) schichten.push(["", "Tag", true]);
+  return schichten;
+}
+
 document.getElementById("monatZurueck").addEventListener("click", () => {
-  monatsStart = new Date(monatsStart.getFullYear(), monatsStart.getMonth() - 1, 1);
+  monatsStart = monatBegrenzen(new Date(monatsStart.getFullYear(), monatsStart.getMonth() - 1, 1));
   ladeMonat();
 });
 document.getElementById("monatVor").addEventListener("click", () => {
-  monatsStart = new Date(monatsStart.getFullYear(), monatsStart.getMonth() + 1, 1);
+  monatsStart = monatBegrenzen(new Date(monatsStart.getFullYear(), monatsStart.getMonth() + 1, 1));
   ladeMonat();
 });
-document.getElementById("monatDieser").addEventListener("click", () => {
+document.getElementById("monatHeute").addEventListener("click", () => {
   const heute = new Date();
+  const schon = monatsStart.getFullYear() === heute.getFullYear() && monatsStart.getMonth() === heute.getMonth();
   monatsStart = new Date(heute.getFullYear(), heute.getMonth(), 1);
+  if (schon) {
+    document.getElementById("monatStatus").textContent = "Das ist der laufende Monat.";
+    const kopf = document.querySelector("#monatsRahmen th.tagkopf.heute");
+    if (kopf) kopf.scrollIntoView({ inline: "nearest", block: "nearest", behavior: sanft() });
+    return;
+  }
+  ladeMonat();
+});
+document.getElementById("monatWahl").addEventListener("change", (event) => {
+  monatsStart = monatBegrenzen(new Date(monatsStart.getFullYear(), Number(event.target.value), 1));
+  ladeMonat();
+});
+document.getElementById("jahrWahl").addEventListener("change", (event) => {
+  monatsStart = monatBegrenzen(new Date(Number(event.target.value), monatsStart.getMonth(), 1));
   ladeMonat();
 });
 
 async function ladeMonat() {
   const lauf = ++monatLauf;
   const ziel = document.getElementById("monatsRahmen");
+  const status = document.getElementById("monatStatus");
   const label = document.getElementById("monatsLabel");
-  label.textContent = monatsStart.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
-  const dieser = new Date();
-  document.getElementById("monatDieser").disabled = monatsStart.getFullYear() === dieser.getFullYear() && monatsStart.getMonth() === dieser.getMonth();
-  ziel.innerHTML = "<p class=\"leis\">Der Monat wird geladen …</p>";
+  const titel = monatsStart.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  label.textContent = titel;
+  monatsWahlFuellen();
+  status.textContent = "Der Monat wird geladen …";
+  ziel.classList.toggle("laedt", Boolean(ziel.querySelector("table")));
+  if (!ziel.querySelector("table")) ziel.innerHTML = "<p class=\"leis\">Der Monat wird geladen …</p>";
   try {
     const daten = await api("/tagesberichte/monat?jahr=" + monatsStart.getFullYear() + "&monat=" + (monatsStart.getMonth() + 1));
     if (lauf !== monatLauf) return;
+    ziel.classList.remove("laedt");
     if (!daten.kinder.length) {
-      ziel.innerHTML = "<div class=\"zustand\"><p>Noch keine Kinder in diesem Monat.</p><p><a href=\"/verwaltung.html\">Zur Verwaltung</a></p></div>";
+      status.textContent = `${titel}. Noch keine Kinder.`;
+      ziel.innerHTML = "<div class=\"zustand\"><p>Noch keine Kinder in diesem Monat.</p><p class=\"leis\">In der Verwaltung lassen sich Platzhalter anlegen.</p><p><a href=\"/verwaltung.html\">Zur Verwaltung</a></p></div>";
       return;
     }
-    const alle = daten.kinder[0].tage;
+    const tage = daten.kinder[0].tage.filter((tag) => tag.im_monat !== false);
     const heute = heuteLokal();
-    let html = "";
-    for (let start = 0; start < alle.length; start += 7) {
-      const block = alle.slice(start, start + 7);
-      const von = datumAusIso(block[0].datum);
-      const bis = datumAusIso(block[block.length - 1].datum);
-      const format = (datum) => datum.toLocaleDateString("de-DE", { day: "numeric", month: "numeric" });
-      const kinder = daten.kinder.map((kind) => ({
-        ...kind,
-        tage: kind.tage.slice(start, start + 7),
-      }));
-      const kopf = `<tr><th scope="col">Kind</th>${block.map((tag) => {
-        const text = datumAusIso(tag.datum).toLocaleDateString("de-DE", { weekday: "short", day: "numeric" });
-        const klasse = [tag.datum === heute ? "heute" : "", tag.im_monat === false ? "fremd" : ""].filter(Boolean).join(" ");
-        return `<th scope="col" class="${klasse}">${escapeHtml(text)}</th>`;
-      }).join("")}</tr>`;
-      const nameDatum = block.find((tag) => tag.im_monat !== false)?.datum || block[0].datum;
-      const koerper = kinder.map((kind) => {
-        const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
-        const zellen = kind.tage.map((tag) => {
-          const darstellung = tagesdarstellung(tag, name);
-          const notiz = fokusNotiz(tag);
-          const klasse = [tag.datum === heute ? "heute" : "", tag.im_monat === false ? "fremd" : ""].filter(Boolean).join(" ");
-          return `<td class="${klasse}"><div class="wochenzelle" title="${escapeHtml(darstellung.titel)}">
-            <div class="wochenfokus">
-              ${schichtFokus(kind, tag, "frueh", "Früh")}
-              ${schichtFokus(kind, tag, "spaet", "Spät")}
-            </div>
-            <div class="wocheneben">
-              ${schichtFokus(kind, tag, "mittel", "Mittel", true)}
-              ${schichtFokus(kind, tag, "nacht", "Nacht", true)}
-              ${schichtOhne(kind, tag)}
-            </div>
-            ${notiz ? `<span class="tageshinweis">${escapeHtml(notiz)}</span>` : ""}
-          </div></td>`;
-        }).join("");
-        return `<tr><th scope="row"><button type="button" class="link" data-kind="${kind.id}" data-datum="${escapeHtml(nameDatum)}">${escapeHtml(name)}</button></th>${zellen}</tr>`;
+    const kopf = tage.map((tag) => {
+      const datum = datumAusIso(tag.datum);
+      const wotag = datum.toLocaleDateString("de-DE", { weekday: "short" }).replace(".", "");
+      const ruhe = datum.getDay() === 0 || datum.getDay() === 6;
+      const klasse = [tag.datum === heute ? "heute" : "", ruhe ? "ruhetag" : ""].filter(Boolean).join(" ");
+      return `<th scope="col" class="tagkopf ${klasse}"><span class="wotag">${escapeHtml(wotag)}</span><span class="tagzahl">${datum.getDate()}</span></th>`;
+    }).join("");
+    const koerper = daten.kinder.map((kind, index) => {
+      const name = `${kind.vorname} ${kind.nachname || ""}`.trim();
+      const kindTage = kind.tage.filter((tag) => tag.im_monat !== false);
+      const schichten = monatsSchichten(kindTage);
+      const gruppe = index % 2 === 0 ? "gruppe-a" : "gruppe-b";
+      const nameDatum = kindTage.find((tag) => tag.datum === heute)?.datum || kindTage[0].datum;
+      return schichten.map((schicht, schichtIndex) => {
+        const nameZelle = schichtIndex === 0
+          ? `<th scope="row" class="kindname" rowspan="${schichten.length}"><button type="button" class="link" data-kind="${kind.id}" data-datum="${escapeHtml(nameDatum)}">${escapeHtml(name)}</button></th>`
+          : "";
+        const felder = kindTage.map((tag) => monatsFeld(kind, tag, schicht[0], schicht[1], schicht[2])).join("");
+        const zeile = schicht[2] ? "nebenzeile" : "hauptzeile";
+        const anfang = schichtIndex === 0 ? "kindanfang" : "";
+        return `<tr class="${gruppe} ${zeile} ${anfang}">${nameZelle}<th scope="row" class="schichtname">${escapeHtml(schicht[1])}</th>${felder}</tr>`;
       }).join("");
-      html += `<section class="monatswoche"><h2>${format(von)} – ${format(bis)}</h2><div class="wochenrahmen"><table class="woche"><thead>${kopf}</thead><tbody>${koerper}</tbody></table></div></section>`;
-    }
-    ziel.innerHTML = html;
+    }).join("");
+    const anzahl = daten.kinder.length === 1 ? "1 Kind" : `${daten.kinder.length} Kinder`;
+    status.textContent = `${titel} · ${anzahl}.`;
+    ziel.innerHTML = `<div class="monatsrahmen"><table class="monat"><caption class="sr-only">Monatsübersicht ${escapeHtml(titel)}. Zeilen sind Kinder und Schichten, Spalten sind Tage.</caption><thead><tr><th scope="col" class="namekopf">Kind</th><th scope="col" class="schichtkopf">Schicht</th>${kopf}</tr></thead><tbody>${koerper}</tbody></table></div>`;
+    const heuteKopf = ziel.querySelector("th.tagkopf.heute");
+    if (heuteKopf) heuteKopf.scrollIntoView({ inline: "nearest", block: "nearest", behavior: sanft() });
   } catch (fehler) {
     if (lauf !== monatLauf) return;
+    ziel.classList.remove("laedt");
+    status.textContent = "Der Monat ist gerade nicht erreichbar.";
     ziel.innerHTML = zustandHtml("Der Monat ist gerade nicht erreichbar.", fehler.message, "neu");
   }
 }

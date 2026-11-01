@@ -1,5 +1,7 @@
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 import models  # noqa: F401  (registriert die Tabellen)
@@ -26,6 +28,15 @@ app.include_router(medikamente.router)
 app.include_router(kontakte.router)
 app.include_router(seed.router)
 app.include_router(pruefung.router)
+
+
+@app.exception_handler(RequestValidationError)
+async def eingabe_ungueltig(_request, _exc):
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Die Eingabe ist unvollständig oder ungültig. Bitte die Angaben prüfen."},
+    )
+
 
 STATIC_DIR = bundle_root() / "static"
 app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

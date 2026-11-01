@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ELION – Verwaltung</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>
+    try {
+      var thema = localStorage.getItem("elion-thema");
+      if (thema && thema !== "aktuell") document.documentElement.setAttribute("data-thema", thema);
+    } catch (e) {}
+  </script>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="bereich-verwaltung">
@@ -21,6 +27,14 @@
       <a href="/#woche">Woche</a>
       <a href="/#monat">Monat</a>
     </nav>
+    <label class="thema-wahl">Darstellung
+      <select id="themaWahl" aria-label="Darstellung">
+        <option value="aktuell">Aktuell</option>
+        <option value="luna">Windows XP Luna</option>
+        <option value="modern">Modern Soft</option>
+        <option value="linux">Linux dunkel</option>
+      </select>
+    </label>
     <a class="nav-verwaltung aktiv" href="/verwaltung.html" aria-current="page">Verwaltung</a>
   </header>
   <main>
